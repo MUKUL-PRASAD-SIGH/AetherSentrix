@@ -597,8 +597,181 @@ class ScenarioLibrary:
                 "description": "Evil twin WiFi access point attack",
                 "mitre_tactics": ["Initial Access", "Credential Access"],
                 "mitre_techniques": ["T1557", "T1110", "T1040"]
-            }
+            },
+
+            # ================================================================
+            # Adaptive Trust & Deception Engine — Demo Scenarios
+            # ================================================================
+
+            "legit_admin_false_positive": {
+                "description": (
+                    "DEMO SCENARIO A — Legitimate Admin (False Positive).\n"
+                    "Admin uploads a large quarterly backup (4 GB). The anomaly detector flags "
+                    "it as a potential exfiltration event. The system routes the session to the "
+                    "deception sandbox. Inside the sandbox the user stops immediately after the "
+                    "upload — no probing, no injection, no escalation. The intent classifier "
+                    "scores this as LEGIT_ANOMALY and the system recommends allowing real access."
+                ),
+                "mitre_tactics": ["Exfiltration"],
+                "mitre_techniques": ["T1041"],
+                "sandbox_demo": True,
+                "expected_verdict": "LEGIT_ANOMALY",
+                "steps": [
+                    # Normal login from known user
+                    {"event_type": "successful_login",    "delay": 0,   "metadata": {"user": "admin", "method": "SSO"}},
+                    # Large file transfer (triggers anomaly)
+                    {"event_type": "data_exfiltration",   "delay": 30,  "metadata": {"bytes": 4_200_000_000, "file": "quarterly_backup.tar.gz"}},
+                    # System flags → sandbox routing
+                    {"event_type": "sandbox_routing",     "delay": 35,  "metadata": {"reason": "abnormal_transfer_volume", "trust_score": 0.42}},
+                    # User receives fake export confirmation — stops there
+                    {"event_type": "file_access",         "delay": 60,  "metadata": {"path": "/data/backup", "result": "success (honey)"}},
+                    # No further probing — session ends
+                    {"event_type": "session_end",         "delay": 65,  "metadata": {"reason": "user_logout"}},
+                    # Intent classification
+                    {"event_type": "intent_classification","delay": 66,  "metadata": {"label": "LEGIT_ANOMALY", "confidence": 0.82}},
+                    {"event_type": "analyst_decision",    "delay": 70,  "metadata": {"verdict": "ALLOW", "note": "Confirmed quarterly backup"}},
+                ],
+                "narrative": (
+                    "Admin uploads 4 GB backup → flagged → sandboxed → stops immediately → "
+                    "LEGIT_ANOMALY → analyst allows real access."
+                ),
+            },
+
+            "attacker_sandbox_caught": {
+                "description": (
+                    "DEMO SCENARIO B — Confirmed Attacker Caught in Sandbox.\n"
+                    "An attacker fails login 6 times using a credential-stuffing list, then "
+                    "succeeds with a valid credential. The trust score drops to 0.21. The "
+                    "session is routed to the deception sandbox. Inside, the attacker probes "
+                    "12 distinct endpoints, injects SQL fragments, and escalates to /admin/export. "
+                    "The intent classifier scores this as HACKER (0.94 confidence). "
+                    "The system blocks the session and creates a SOC incident."
+                ),
+                "mitre_tactics": ["Credential Access", "Discovery", "Exfiltration"],
+                "mitre_techniques": ["T1110", "T1046", "T1041", "T1190"],
+                "sandbox_demo": True,
+                "expected_verdict": "HACKER",
+                "steps": [
+                    # Credential stuffing storm
+                    {"event_type": "brute_force",          "delay": 0,  "repeat": 6, "metadata": {"tool": "hydra", "target": "/login"}},
+                    # Successful login after stuffing
+                    {"event_type": "successful_login",     "delay": 45, "metadata": {"user": "r.wong", "source_ip": "185.220.101.55"}},
+                    # Trust score critically low → sandbox
+                    {"event_type": "sandbox_routing",      "delay": 46, "metadata": {"reason": "failure_success_chain+unknown_ip", "trust_score": 0.21}},
+                    # Recon sweep inside sandbox
+                    {"event_type": "network_scan",         "delay": 50, "metadata": {"paths_probed": 12}},
+                    # SQL injection attempt
+                    {"event_type": "sql_injection",        "delay": 60, "metadata": {"payload": "' OR '1'='1", "endpoint": "/v1/alerts"}},
+                    # Escalation to admin endpoint
+                    {"event_type": "privilege_escalation", "delay": 70, "metadata": {"target": "/admin/export", "result": "honey_response"}},
+                    {"event_type": "data_exfiltration",    "delay": 80, "metadata": {"bytes": 0, "note": "fake data returned by honey API"}},
+                    # Intent classification
+                    {"event_type": "intent_classification","delay": 82, "metadata": {"label": "HACKER", "confidence": 0.94}},
+                    # Block + escalate
+                    {"event_type": "session_terminated",   "delay": 83, "metadata": {"action": "BLOCK", "incident": "INC-2024-0042"}},
+                    {"event_type": "analyst_decision",     "delay": 90, "metadata": {"verdict": "BLOCK", "note": "Confirmed credential stuffing + recon + injection"}},
+                ],
+                "narrative": (
+                    "Credential stuffing (6 failures) → succeeds → trust_score=0.21 → "
+                    "sandboxed → probes 12 endpoints + SQL injection + admin escalation → "
+                    "HACKER (94%) → BLOCK + SOC incident created."
+                ),
+            },
+
+            # ================================================================
+            # EDGE CASE SCENARIO — Identical Surface, Divergent Intent
+            # ================================================================
+            "identical_behavior_divergent_intent": {
+                "description": (
+                    "EDGE CASE — Suspicion-Blind Universal Containment.\n\n"
+                    "TWO users hit the exact same trigger simultaneously:\n"
+                    "  • User A (j.smith):  Real employee who forgot their password 10 times.\n"
+                    "  • User B (x.anon):   Attacker running a credential-stuffing script.\n\n"
+                    "Pre-auth signals are INDISTINGUISHABLE:\n"
+                    "  - Same failure count (10), same timing pattern, same login endpoint.\n"
+                    "  - Traditional binary systems would make a guess and be wrong 50% of the time.\n\n"
+                    "AetherSentrix solution — Suspicion-Blind Universal Containment:\n"
+                    "  - BOTH sessions are sandboxed immediately on the same trigger.\n"
+                    "  - Neither user gets real system access.\n"
+                    "  - The sandbox watches what each does AFTER successful auth.\n\n"
+                    "Post-auth divergence (the real signal):\n"
+                    "  • j.smith (dumb user):  Opens inbox, reads one report, logs out. 0 probes.\n"
+                    "  • x.anon  (attacker):   Hits 9 endpoints in 30s, injects SQL, tries /admin.\n\n"
+                    "Result:\n"
+                    "  • j.smith → divergence_score=0.08 → CONFIRMED_LEGIT → real access granted.\n"
+                    "  • x.anon  → divergence_score=0.91 → CONFIRMED_HACKER → BLOCK + SOC alert."
+                ),
+                "mitre_tactics": ["Credential Access", "Discovery"],
+                "mitre_techniques": ["T1110", "T1046", "T1078"],
+                "sandbox_demo": True,
+                "ambiguous_session": True,       # Flag: uses AmbiguousSessionRegistry
+                "expected_verdicts": {
+                    "j.smith": "CONFIRMED_LEGIT",
+                    "x.anon":  "CONFIRMED_HACKER",
+                },
+                "steps": [
+                    # — Phase 1: Identical pre-auth (runs in parallel for both users) —
+                    {"event_type": "brute_force", "delay": 0,  "repeat": 10,
+                     "metadata": {"user": "j.smith", "note": "Forgot password — dumb user"}},
+                    {"event_type": "brute_force", "delay": 0,  "repeat": 10,
+                     "metadata": {"user": "x.anon",  "note": "Credential stuffing — attacker"}},
+
+                    # Both succeed — trigger fires for both
+                    {"event_type": "successful_login", "delay": 45,
+                     "metadata": {"user": "j.smith", "source_ip": "10.1.2.34"}},
+                    {"event_type": "successful_login", "delay": 45,
+                     "metadata": {"user": "x.anon",  "source_ip": "185.220.101.77"}},
+
+                    # BOTH routed to sandbox — same trigger, same treatment
+                    {"event_type": "ambiguous_sandbox_routing", "delay": 46,
+                     "metadata": {
+                         "reason": "10_failures_then_success",
+                         "users_sandboxed": ["j.smith", "x.anon"],
+                         "note": "Suspicion-blind: identical surface → both contained"
+                     }},
+
+                    # — Phase 2: Post-auth divergence (dumb user) —
+                    {"event_type": "file_access", "delay": 50,
+                     "metadata": {"user": "j.smith", "path": "/inbox", "is_suspicious": False}},
+                    {"event_type": "file_access", "delay": 55,
+                     "metadata": {"user": "j.smith", "path": "/reports/q1.pdf", "is_suspicious": False}},
+                    {"event_type": "session_end", "delay": 60,
+                     "metadata": {"user": "j.smith", "reason": "user_logout"}},
+
+                    # j.smith classified as LEGIT → granted real access
+                    {"event_type": "intent_classification", "delay": 61,
+                     "metadata": {
+                         "user": "j.smith",
+                         "label": "CONFIRMED_LEGIT",
+                         "divergence_score": 0.08,
+                         "action": "ALLOW — real access granted"
+                     }},
+
+                    # — Phase 2: Post-auth divergence (attacker) —
+                    {"event_type": "network_scan", "delay": 50,
+                     "metadata": {"user": "x.anon", "paths_probed": 9, "is_suspicious": True}},
+                    {"event_type": "sql_injection", "delay": 58,
+                     "metadata": {"user": "x.anon", "payload": "' OR 1=1 --", "endpoint": "/v1/users"}},
+                    {"event_type": "privilege_escalation", "delay": 65,
+                     "metadata": {"user": "x.anon", "target": "/admin/export", "result": "honey_response"}},
+
+                    # x.anon classified as HACKER → blocked
+                    {"event_type": "intent_classification", "delay": 67,
+                     "metadata": {
+                         "user": "x.anon",
+                         "label": "CONFIRMED_HACKER",
+                         "divergence_score": 0.91,
+                         "action": "BLOCK + SOC incident INC-2024-0043"
+                     }},
+                ],
+                "narrative": (
+                    "Both j.smith and x.anon: 10 failures → success (identical). "
+                    "Both sandboxed. j.smith: opens inbox, logs out → LEGIT (score=0.08) → ALLOW. "
+                    "x.anon: probes 9 endpoints + SQL inject + admin escalation → HACKER (score=0.91) → BLOCK."
+                ),
+            },
         }
+
 
     @staticmethod
     def get_all_scenarios() -> List[str]:

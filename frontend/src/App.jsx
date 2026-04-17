@@ -8,6 +8,7 @@ const TABS = [
   { id: "alerts", label: "Alerts" },
   { id: "analytics", label: "Analytics" },
   { id: "simulation", label: "Simulation" },
+  { id: "sandbox", label: "🎭 Sandbox" },
   { id: "ingestion", label: "Ingestion" },
   { id: "models", label: "Models" },
   { id: "assistant", label: "Assistant" },
@@ -859,6 +860,11 @@ export default function App() {
                   <div className="panel-subtitle">
                     Relationship view derived from the alert entities and attack
                     graph payloads.
+                    <br />
+                    <span style={{ color: "var(--accent-color)" }}>
+                      <strong>AIM:</strong> Visualizes entity relationships to
+                      trace the path and scope of the attack.
+                    </span>
                   </div>
                 </div>
               </div>
@@ -951,6 +957,10 @@ export default function App() {
               <SimulationSummary report={simulationReport} alert={simulationAlert} />
             </div>
           </section>
+        ) : null}
+
+        {activeTab === "sandbox" ? (
+          <SandboxPanel apiBaseUrl={apiBaseUrl} apiToken={apiToken} />
         ) : null}
 
         {activeTab === "ingestion" ? (
@@ -2308,4 +2318,187 @@ function formatMetric(value) {
     return "n/a";
   }
   return `${Math.round(value * 100)}%`;
+}
+
+function SandboxPanel({ apiBaseUrl, apiToken }) {
+  const [sessions, setSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [verdictNote, setVerdictNote] = useState("");
+
+  const fetchSessions = async () => {
+    setLoading(true);
+    try {
+      const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {};
+      const res = await fetch(`${apiBaseUrl}/v1/sandbox/sessions`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data.sessions || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sandbox sessions:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSessionDetails = async (sessionId) => {
+    try {
+      const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {};
+      const res = await fetch(`${apiBaseUrl}/v1/sandbox/sessions/${sessionId}`, {
+        headers,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedSession(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch session details:", err);
+    }
+  };
+
+  const submitDecision = async (verdict) => {
+    if (!selectedSession) return;
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (apiToken) headers["Authorization"] = `Bearer ${apiToken}`;
+
+      const res = await fetch(`${apiBaseUrl}/v1/sandbox/decision`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          session_id: selectedSession.session.session_id,
+          verdict,
+          note: verdictNote,
+        }),
+      });
+      if (res.ok) {
+        setVerdictNote("");
+        fetchSessions();
+        loadSessionDetails(selectedSession.session.session_id);
+      }
+    } catch (err) {
+      console.error("Failed to submit verdict:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  return (
+    <section className="content-grid">
+      <div className="panel">
+        <div className="panel-header">
+          <div className="panel-title">Active Sandboxed Sessions</div>
+          <button className="ghost-button" onClick={fetchSessions}>
+            Refresh
+          </button>
+        </div>
+        {loading ? (
+          <div className="empty-state">Loading sessions...</div>
+        ) : sessions.length === 0 ? (
+          <div className="empty-state">No active sandbox sessions.</div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th>Source IP</th>
+                <th>Trust Score</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr key={s.session_id}>
+                  <td>{truncate(s.session_id, 12)}</td>
+                  <td>{s.source_ip}</td>
+                  <td>{formatMetric(s.current_trust_score)}</td>
+                  <td>
+                    <span className={`badge ${s.status === "ACTIVE" ? "badge-warning" : ""}`}>
+                      {s.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="ghost-button"
+                      onClick={() => loadSessionDetails(s.session_id)}
+                    >
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <div className="panel-title">Session Analysis & Verdict</div>
+        </div>
+        {selectedSession ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div className="alert-detail">
+              <strong>User:</strong> {selectedSession.session.user_id} <br />
+              <strong>Trust Score:</strong>{" "}
+              {formatMetric(selectedSession.session.current_trust_score)} <br />
+              <strong>Intent Label:</strong>{" "}
+              <span className="badge badge-danger">
+                {selectedSession.intent_classification.label}
+              </span>{" "}
+              ({formatMetric(selectedSession.intent_classification.confidence)} conf)
+            </div>
+
+            <div className="explanation-box" style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "8px" }}>
+              <strong>Explainability Engine Narrative:</strong>
+              <p style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
+                {selectedSession.explanation.narrative}
+              </p>
+            </div>
+
+            {selectedSession.session.status === "ACTIVE" ? (
+              <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <label className="field">
+                  <span>Analyst Notes</span>
+                  <input
+                    type="text"
+                    value={verdictNote}
+                    onChange={(e) => setVerdictNote(e.target.value)}
+                    placeholder="Enter reasoning for verdict..."
+                  />
+                </label>
+                <div style={{ display: "flex", gap: "1rem" }}>
+                  <button
+                    className="primary-button"
+                    style={{ background: "var(--success-color)", color: "black" }}
+                    onClick={() => submitDecision("ALLOW")}
+                  >
+                    Allow (False Positive)
+                  </button>
+                  <button
+                    className="primary-button"
+                    style={{ background: "var(--danger-color)" }}
+                    onClick={() => submitDecision("BLOCK")}
+                  >
+                    Block (Confirmed Hacker)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="alert-detail" style={{ background: "var(--bg-accent)" }}>
+                <strong>Final Verdict:</strong> {selectedSession.session.analyst_verdict} <br/>
+                <strong>Note:</strong> {selectedSession.session.analyst_note || "None"}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">Select a session to inspect.</div>
+        )}
+      </div>
+    </section>
+  );
 }
