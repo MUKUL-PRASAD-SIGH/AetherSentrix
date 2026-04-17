@@ -1,0 +1,48 @@
+# Minimal requirements for the AI-Driven Threat Detection & Simulation Engine
+
+# Core dependencies
+python-dateutil>=2.8.2
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Machine Learning
+scikit-learn>=1.2.0
+xgboost>=1.7.0
+
+# API Framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# Security & Authentication
+PyJWT>=2.8.0
+cryptography>=41.0.0
+python-multipart>=0.0.6
+
+# Logging
+python-json-logger>=2.0.7
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0
+
+# Monitoring & Metrics
+prometheus-client>=0.18.0
+
+# SHAP for explainability
+shap>=0.43.0
+
+# Caching
+redis>=5.0.0
+
+# Data processing
+scipy>=1.11.0
+
+# Development tools (optional)
+black>=23.0.0
+flake8>=6.1.0
+mypy>=1.7.0
+bandit>=1.7.5
+safety>=2.3.0
