@@ -307,6 +307,164 @@ export function buildPortalWorkspace({
   issues,
   isConnected,
   alertsCount,
+}) {
+  const safeTemplate = template || { name: "the tenant", modules: [], integrations: [] };
+  const safeModule = module || { label: "Overview", caption: "Primary banking journey" };
+  const safeScenario = scenario || { title: "Journey QA", subtitle: "Customer flow validation" };
+  const safeIssues = Array.isArray(issues) ? issues : [];
+  const highPriorityIssues = safeIssues.filter((item) => item.severity === "high").length;
+  const mediumPriorityIssues = safeIssues.filter((item) => item.severity === "medium").length;
+  const connectedLabel = isConnected
+    ? `${alertsCount} live security signal${alertsCount === 1 ? "" : "s"}`
+    : "frontend-driven simulation mode";
+
+  if (roleId === "employee") {
+    return {
+      summary: `${safeModule.label} is framed as an internal bank workspace inside ${safeTemplate.name}, tuned for ${safeScenario.title.toLowerCase()} and maker-checker operations.`,
+      highlights: [
+        {
+          kicker: "Workspace mode",
+          title: `${safeModule.label} command surface`,
+          detail: `Staff users can move through ${safeModule.caption.toLowerCase()} while BankThink keeps the workflow anchored to operational controls and service quality.`,
+        },
+        {
+          kicker: "Risk pressure",
+          title: `${highPriorityIssues} high-priority internal issues`,
+          detail: "Queue stalls, approval drift, and KYC defects are surfaced alongside the security layer so operational defects do not hide privileged misuse.",
+        },
+        {
+          kicker: "Runtime context",
+          title: connectedLabel,
+          detail: "The employee view stays compatible with the backend archive, scenario runner, and analyst console instead of becoming a disconnected mockup.",
+        },
+      ],
+      quickNotes: [
+        "Review queue ownership before escalating friction into the fraud or support lanes.",
+        "Use the endpoint navigator to pair each workflow issue with archive visibility and API coverage.",
+        `Current scenario lens: ${safeScenario.subtitle}.`,
+      ],
+      features: [
+        {
+          kicker: "Operations",
+          title: "Maker-checker workflow rail",
+          detail: "Approvals, overrides, and servicing tasks stay grouped with clear handoff points for branch and central teams.",
+        },
+        {
+          kicker: "Compliance",
+          title: "Audit-first servicing trace",
+          detail: "Every operational action is described as if it should stand up to audit, dispute review, and analyst reconstruction.",
+        },
+        {
+          kicker: "Triage",
+          title: "Issue board linkage",
+          detail: `${mediumPriorityIssues} medium-priority issue${mediumPriorityIssues === 1 ? "" : "s"} can be pushed into batch detection, archives, or analyst review from the same tenant shell.`,
+        },
+      ],
+      checkpoints: [
+        "Validate KYC/document paths against real queue ownership and expected archive signals.",
+        "Confirm high-risk operational actions still map cleanly into detection and analyst review.",
+        `Verify the ${safeModule.label.toLowerCase()} surface still fits within ${safeTemplate.modules.length || 0} staged banking modules.`,
+      ],
+    };
+  }
+
+  if (roleId === "legacy") {
+    return {
+      summary: `${safeModule.label} is now treated as a risky stale-access surface inside ${safeTemplate.name}, blending portal realism with containment and analyst review.`,
+      highlights: [
+        {
+          kicker: "Containment story",
+          title: "Legacy identity under observation",
+          detail: "The experience intentionally looks believable while framing every privileged reach attempt as evidence for the trust and sandbox layers.",
+        },
+        {
+          kicker: "Security pressure",
+          title: `${highPriorityIssues} high-risk access concern${highPriorityIssues === 1 ? "" : "s"}`,
+          detail: "Dormant credentials, privilege mismatch, and offboarding failures are kept front and center instead of being buried in decorative UI.",
+        },
+        {
+          kicker: "Runtime context",
+          title: connectedLabel,
+          detail: "When the backend is reachable, the tenant story can pivot directly into sandbox sessions, analyst verdicts, and recent alerts.",
+        },
+      ],
+      quickNotes: [
+        "Treat every privileged screen as containment-friendly, not as an endorsement that the access is legitimate.",
+        "Use the scenario lens and issue lab together to stress offboarding, step-up auth, and privilege drift.",
+        "If the backend is offline, keep the portal in walkthrough mode and avoid claiming live verdicts.",
+      ],
+      features: [
+        {
+          kicker: "Security",
+          title: "Privileged reach visibility",
+          detail: "The module shell emphasizes where a stale identity should never be able to navigate without review.",
+        },
+        {
+          kicker: "Forensics",
+          title: "Analyst-ready sequence clues",
+          detail: "Each issue suggests an investigation route through simulate, detect, archives, and the sandbox console.",
+        },
+        {
+          kicker: "Governance",
+          title: "Offboarding control check",
+          detail: `Template integrations such as ${safeTemplate.integrations.slice(0, 3).join(", ") || "identity, audit, and fraud"} are framed as likely sources of policy drift.`,
+        },
+      ],
+      checkpoints: [
+        "Verify sandbox and analyst endpoints stay reachable from the same API base as the main console.",
+        "Confirm dormant-access journeys still read as suspicious even when no live data is loaded.",
+        `Cross-check ${safeScenario.title.toLowerCase()} outputs with trust, detection, and archive behaviour.`,
+      ],
+    };
+  }
+
+  return {
+    summary: `${safeModule.label} presents a customer-safe banking journey inside ${safeTemplate.name}, while ${safeScenario.title.toLowerCase()} keeps the experience tied to real platform checks.`,
+    highlights: [
+      {
+        kicker: "Customer flow",
+        title: `${safeModule.label} ready for walkthrough`,
+        detail: `Balances, servicing, and payment flows stay grounded in ${safeModule.caption.toLowerCase()} rather than feeling like a placeholder tenant.`,
+      },
+      {
+        kicker: "Product QA",
+        title: `${safeIssues.length} issue${safeIssues.length === 1 ? "" : "s"} staged for validation`,
+        detail: "The issue lab lets you model friction, missing service behaviour, and suspicious journeys without leaving the portal shell.",
+      },
+      {
+        kicker: "Security backdrop",
+        title: connectedLabel,
+        detail: "The customer portal remains distinct from the analyst console, but it still reflects the same telemetry and investigation surface underneath.",
+      },
+    ],
+    quickNotes: [
+      "Start with a normal customer action, then pivot into the issue lab to model friction or abuse.",
+      "Use endpoint guidance to decide whether a problem belongs in ingestion, detection, or assistant review.",
+      `Scenario focus: ${safeScenario.subtitle}.`,
+    ],
+    features: [
+      {
+        kicker: "Banking",
+        title: "Self-service module set",
+        detail: `${safeTemplate.modules.slice(0, 4).join(", ") || "Accounts, payments, cards, and support"} stay visible as part of one tenant-specific shell.`,
+      },
+      {
+        kicker: "Operations",
+        title: "Escalation-friendly journey",
+        detail: "Customer actions are written so staff review, fraud checks, and service handoffs can be demonstrated without rebuilding the UI.",
+      },
+      {
+        kicker: "Quality",
+        title: "Portal issue simulation",
+        detail: `${mediumPriorityIssues} medium-priority issue${mediumPriorityIssues === 1 ? "" : "s"} can be converted into targeted backend test flows from inside the same screen.`,
+      },
+    ],
+    checkpoints: [
+      "Validate that customer actions can escalate into support, fraud, or analyst review without breaking the tenant story.",
+      "Check the recent event/archive endpoints after simulating customer-facing problems.",
+      `Confirm ${safeTemplate.name} branding still stays separate from the shared security console.`,
+    ],
+  };
 }
 
 export function buildSimulatedIssues(draft, roleId, scenarioId) {

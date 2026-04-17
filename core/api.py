@@ -35,6 +35,28 @@ ingestor = EventIngestor(archive_store=event_store)
 frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
+def _sandbox_session_payload(session_id: str) -> tuple[Dict[str, Any] | None, int]:
+    from pipeline.explainability import ExplainabilityEngine
+    from pipeline.sandbox.intent_classifier import IntentClassifier
+    from pipeline.sandbox.session_tracker import get_tracker
+
+    session = get_tracker().get(session_id)
+    if not session:
+        return None, 404
+
+    intent = IntentClassifier().classify(session)
+    explanation = ExplainabilityEngine().explain_sandbox_decision(
+        trust_result={"trust_score": session.current_trust_score, "label": intent.label.value, "risk_flags": []},
+        sandbox_session=session.to_dict(),
+        intent_classification=intent.to_dict(),
+    )
+    return {
+        "session": session.to_dict(),
+        "intent_classification": intent.to_dict(),
+        "explanation": explanation,
+    }, 200
+
+
 class InMemoryRateLimiter:
     def __init__(self, requests_per_minute: int):
         self.requests_per_minute = requests_per_minute
@@ -234,6 +256,18 @@ class AetherSentrixAPIHandler(BaseHTTPRequestHandler):
                     ]
                 }
             )
+        elif self.path == "/v1/sandbox/sessions":
+            from pipeline.sandbox.session_tracker import get_tracker
+
+            tracker = get_tracker()
+            self._send_json({"sessions": tracker.all_as_dicts(), "total": len(tracker.list_all())})
+        elif self.path.startswith("/v1/sandbox/sessions/"):
+            session_id = self.path.partition("?")[0].rsplit("/", 1)[-1]
+            payload, status = _sandbox_session_payload(session_id)
+            if payload is None:
+                self._send_json({"error": "Sandbox session not found"}, status=status)
+            else:
+                self._send_json(payload, status=status)
         elif self.path == "/ml/status":
             self._send_json({"ml": model_manager.get_status()})
         elif self.path.startswith("/alerts/recent"):
@@ -356,6 +390,17 @@ class AetherSentrixAPIHandler(BaseHTTPRequestHandler):
                     },
                     status=400,
                 )
+        elif self.path == "/v1/sandbox/decision":
+            from pipeline.sandbox.session_tracker import get_tracker
+
+            session_id = request_data.get("session_id", "")
+            verdict = str(request_data.get("verdict", "MONITOR")).upper()
+            note = request_data.get("note", "")
+            session = get_tracker().submit_analyst_verdict(session_id, verdict, note)
+            if not session:
+                self._send_json({"error": "Sandbox session not found"}, status=404)
+            else:
+                self._send_json({"status": "recorded", "session_id": session_id, "verdict": verdict})
         elif self.path == "/ml/mode":
             try:
                 status = model_manager.switch_mode(request_data.get("mode", "synthetic"))

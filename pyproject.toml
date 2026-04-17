@@ -27,4 +27,4 @@ dependencies = [
 ]
 
 [project.scripts]
-aethersentrix-demo = "main:run_demo"
+aethersentrix-demo = "core.main:run_demo"

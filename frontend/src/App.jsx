@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import LandingPage from "./LandingPage";
-import "./landing.css";
 import { BANK_JOURNEYS, BANK_TEMPLATES, COMPATIBILITY_AREAS, DEFAULT_API_BASE, DEFAULT_ASSISTANT_QUERY, DEFAULT_BATCH_EVENTS, DEFAULT_JSON_EVENTS, DEFAULT_SYSLOG_LINE, ENDPOINT_COUNT, SAAS_CAPABILITIES, TABS } from "./constants.js";
 import { buildMetrics, buildSeverityDistribution, getConnectionIssue, humanize, normalizeClientError, parseResponse } from "./utils.js";
 import { AlertFeed, AlertWorkbench, AnalyticsTable } from "./components/AlertComponents.jsx";
@@ -11,6 +9,15 @@ import { SandboxPanel } from "./components/SandboxPanel.jsx";
 import { CompatibilityPanel, ConnectionGuide, ConsolePreview, DeploymentPanel, ProductSurfaceNav, SaaSReadinessPanel, SignalRibbon } from "./components/ShellComponents.jsx";
 import { Banner, EmptyState, FeatureCard, JsonBlock, MetricCard, StatTile } from "./components/UIComponents.jsx";
 
+function readSurfaceFromHash() {
+  if (typeof window === "undefined") {
+    return "saas";
+  }
+
+  const hash = window.location.hash.replace(/^#/, "");
+  return ["saas", "portal", "console"].includes(hash) ? hash : "saas";
+}
+
 export default function App() {
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE);
   const [apiToken, setApiToken] = useState("");
@@ -19,7 +26,6 @@ export default function App() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("pesitm");
   const [selectedPortalRole, setSelectedPortalRole] = useState("customer");
   const [consoleOpen, setConsoleOpen] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
   const [backendHealth, setBackendHealth] = useState(null);
   const [assistantHealth, setAssistantHealth] = useState(null);
   const [ingestionHealth, setIngestionHealth] = useState(null);

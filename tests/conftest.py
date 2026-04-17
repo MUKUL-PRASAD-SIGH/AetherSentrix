@@ -1,9 +1,15 @@
 """Pytest configuration and fixtures."""
 
+import os
+import sys
+
 import pytest
 import numpy as np
 from fastapi.testclient import TestClient
-from api_v2 import app
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from core.api_v2 import app
 from pipeline.mlops.base_model import MockAnomalyDetector, MockThreatClassifier
 
 

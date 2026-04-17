@@ -1,10 +1,9 @@
 """Production FastAPI application with security."""
 
-from fastapi import FastAPI, HTTPException, Depends, Header, status
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-import logging
 import uuid
 from datetime import datetime
 from typing import Optional, List
@@ -72,7 +71,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 def require_permission(permission: Permission):
     """Create dependency for permission checking."""
     async def check_perms(current_user: dict = Depends(get_current_user)):
-        if not check_permission(current_user["roles"], permission):
+        if not check_permission(permission, current_user["roles"]):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return current_user
     return check_perms
@@ -226,10 +225,14 @@ async def list_alerts(
 @app.put("/v1/alerts/{alert_id}/status")
 async def update_alert_status(
     alert_id: str,
-    status: str,
+    request_body: dict,
     current_user: dict = Depends(require_permission(Permission.MANAGE_ALERTS))
 ):
     """Update alert status."""
+    status = request_body.get("status")
+    if not status:
+        raise HTTPException(status_code=400, detail="Missing status")
+
     if alert_id not in alerts_db:
         raise HTTPException(status_code=404, detail="Alert not found")
     
@@ -255,11 +258,15 @@ async def get_active_models(
 
 @app.post("/v1/models/switch")
 async def switch_model(
-    model_name: str,
-    version: str,
+    request_body: dict,
     current_user: dict = Depends(require_permission(Permission.MODEL_MANAGEMENT))
 ):
     """Switch active model version (admin only)."""
+    model_name = request_body.get("model_name", "")
+    version = request_body.get("version", "")
+    if not model_name or not version:
+        raise HTTPException(status_code=400, detail="Missing model_name or version")
+
     logger.warning(f"Model switch requested for {model_name} to {version} by {current_user['user_id']}")
     return {"status": "success", "model": model_name, "version": version}
 

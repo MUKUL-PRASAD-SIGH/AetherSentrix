@@ -9,7 +9,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
-from api import create_server
+from core.api import create_server
 from pipeline.feature_extraction.feature_extractor import FeatureExtractor
 from pipeline.normalization.event_normalizer import EventNormalizer
 from pipeline.simulation.attack_simulator import EventGenerator

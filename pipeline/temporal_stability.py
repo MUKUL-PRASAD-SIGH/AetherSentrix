@@ -64,6 +64,13 @@ class TemporalStabilityFilter:
             )
             return adjusted, confidence
 
+        if consensus_ratio >= self.consensus_threshold:
+            adjusted["confidence"] = avg_confidence
+            adjusted_explanation["temporal_stability"] = (
+                "Recent activity reached a stable consensus, so the alert was kept consistent across repeated observations."
+            )
+            return adjusted, self._normalize_confidence(avg_confidence)
+
         return classification, confidence
 
     def _entity_signature(self, feature_vector: Dict[str, Any]) -> str:

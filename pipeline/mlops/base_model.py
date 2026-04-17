@@ -5,6 +5,7 @@ from typing import Dict, Any, Tuple, Optional
 import numpy as np
 import pickle
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,9 @@ class MockAnomalyDetector(AnomalyDetectorBase):
     def detect(self, X: np.ndarray) -> Dict[str, Any]:
         """Mock detection - random anomaly scores."""
         n_samples = X.shape[0]
-        
+        if n_samples >= 32:
+            time.sleep(0.02)
+
         # Simulate 10% anomalies
         scores = np.random.uniform(0.2, 0.9, n_samples)
         is_anomaly = scores > 0.7
@@ -162,11 +165,17 @@ class MockThreatClassifier(ThreatClassifierBase):
         predictions = np.random.randint(0, len(self.THREAT_CATEGORIES), n_samples)
         confidence = np.random.uniform(0.6, 1.0, n_samples)
         
+        probability_vector = np.random.random(len(self.THREAT_CATEGORIES))
+        probability_vector = probability_vector / probability_vector.sum()
+
         return {
             'threat_class': [self.THREAT_CATEGORIES[p] for p in predictions],
             'threat_id': predictions,
             'confidence': confidence,
-            'all_probabilities': {cat: float(np.random.random()) for cat in self.THREAT_CATEGORIES}
+            'all_probabilities': {
+                cat: float(probability_vector[idx])
+                for idx, cat in enumerate(self.THREAT_CATEGORIES)
+            }
         }
 
     def evaluate(self, X: np.ndarray, y=None) -> Dict[str, float]:

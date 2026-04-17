@@ -16,7 +16,7 @@ if hasattr(sys.stdout, "reconfigure"):
 def check_imports():
     """Check if all modules can be imported"""
     try:
-        from main import build_detection_engine
+        from core.main import build_detection_engine
         from pipeline.model_factory import ModelFactory
         from pipeline.simulation.attack_simulator import AttackSimulator
         from demo.demo_runner import DemoRunner
@@ -72,7 +72,7 @@ def check_simulation():
 
 def check_api():
     """Check if API endpoints exist"""
-    api_files = ['api.py', 'app.py', 'server.py', 'main_api.py']
+    api_files = ['api.py', 'app.py', 'server.py', 'main_api.py', 'core/api.py', 'core/api_v2.py']
     api_found = any(os.path.exists(f) for f in api_files)
 
     if api_found:

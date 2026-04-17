@@ -32,16 +32,17 @@ class XGBoostRFEnsemble:
             "learning_rate": 0.1,
             "objective": "multi:softprob",
             "random_state": 42,
-            "n_jobs": -1,
+            "n_jobs": 1,
+            "verbosity": 0,
         }
         self.rf_config = rf_config or {
             "n_estimators": 100,
             "max_depth": 10,
             "class_weight": "balanced_subsample",
             "random_state": 42,
-            "n_jobs": -1,
+            "n_jobs": 1,
         }
-        self.xgb_model = XGBClassifier(**self.xgb_config)
+        self.xgb_model = XGBClassifier(**self.xgb_config) if XGBClassifier else None
         self.rf_model = RandomForestClassifier(**self.rf_config)
         self.scaler = scaler or StandardScaler()
         self.label_encoder = label_encoder or LabelEncoder()
@@ -51,8 +52,21 @@ class XGBoostRFEnsemble:
         """Train the ensemble models."""
         X_scaled = self.scaler.fit_transform(X)
         y_encoded = self.label_encoder.fit_transform(y)
+        class_count = len(self.label_encoder.classes_)
 
-        self.xgb_model.fit(X_scaled, y_encoded)
+        if XGBClassifier:
+            xgb_params = dict(self.xgb_config)
+            xgb_params["n_jobs"] = 1
+            xgb_params["verbosity"] = 0
+            if class_count <= 2:
+                xgb_params["objective"] = "binary:logistic"
+                xgb_params.pop("num_class", None)
+            else:
+                xgb_params["objective"] = "multi:softprob"
+                xgb_params["num_class"] = class_count
+            self.xgb_model = XGBClassifier(**xgb_params)
+            self.xgb_model.fit(X_scaled, y_encoded)
+
         self.rf_model.fit(X_scaled, y_encoded)
         self.is_trained = True
 
@@ -62,17 +76,20 @@ class XGBoostRFEnsemble:
             raise ValueError("Model not trained")
 
         X_scaled = self.scaler.transform(X)
-        xgb_pred = self.xgb_model.predict(X_scaled)
+        if self.xgb_model is not None:
+            xgb_pred = self.xgb_model.predict(X_scaled)
+        else:
+            xgb_pred = self.rf_model.predict(X_scaled)
         rf_pred = self.rf_model.predict(X_scaled)
 
         # Simple majority voting
-        predictions = []
+        encoded_predictions = []
         for xgb_p, rf_p in zip(xgb_pred, rf_pred):
             votes = [xgb_p, rf_p]
             majority = max(set(votes), key=votes.count)
-            predictions.append(majority)
+            encoded_predictions.append(int(majority))
 
-        return np.array(predictions)
+        return self.label_encoder.inverse_transform(np.array(encoded_predictions))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predict probabilities using ensemble averaging."""
@@ -80,7 +97,10 @@ class XGBoostRFEnsemble:
             raise ValueError("Model not trained")
 
         X_scaled = self.scaler.transform(X)
-        xgb_proba = self.xgb_model.predict_proba(X_scaled)
+        if self.xgb_model is not None:
+            xgb_proba = self.xgb_model.predict_proba(X_scaled)
+        else:
+            xgb_proba = self.rf_model.predict_proba(X_scaled)
         rf_proba = self.rf_model.predict_proba(X_scaled)
 
         # Average probabilities
@@ -97,7 +117,7 @@ class XGBoostRFEnsemble:
 
         results = []
         for idx, pred in enumerate(predictions):
-            threat_category = self.label_encoder.inverse_transform([pred])[0]
+            threat_category = str(pred)
             max_prob = float(np.max(probabilities[idx]))
             results.append({
                 "threat_category": threat_category,
@@ -112,7 +132,11 @@ class XGBoostRFEnsemble:
         return results
 
     def _features_from_dict(self, feature_vector: Dict[str, Any]) -> List[float]:
-        return [self._as_float(feature_vector.get(key), 0.0) for key in FEATURE_KEYS]
+        values = [self._as_float(feature_vector.get(key), 0.0) for key in FEATURE_KEYS]
+        expected = getattr(self.scaler, "n_features_in_", len(values))
+        if expected > len(values):
+            values.extend([0.0] * (expected - len(values)))
+        return values[:expected]
 
     def _get_severity(self, threat: str) -> str:
         severity_map = {
@@ -180,6 +204,12 @@ class XGBoostRFEnsemble:
         }
         return playbook_map.get(threat, ["Investigate and respond per security policy"])
 
+    def _as_float(self, value: Any, default: float) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
     def save_model(self, path: str) -> None:
         """Save ensemble model to disk."""
         import pickle
@@ -218,15 +248,12 @@ class XGBoostRFEnsemble:
         if not self.is_trained:
             raise ValueError("Model not trained, cannot fine-tune")
 
-        # Adjust XGBoost learning rate for fine-tuning
-        self.xgb_model.set_params(learning_rate=learning_rate)
         X_scaled = self.scaler.transform(X)
         y_encoded = self.label_encoder.transform(y)
 
-        # Fine-tune XGBoost
-        self.xgb_model.fit(X_scaled, y_encoded, xgb_model=self.xgb_model)
+        if self.xgb_model is not None:
+            self.xgb_model.set_params(learning_rate=learning_rate)
+            self.xgb_model.fit(X_scaled, y_encoded, xgb_model=self.xgb_model)
 
-        # Fine-tune Random Forest (limited fine-tuning possible)
-        # For RF, we can update with new samples but it's not true fine-tuning
         self.rf_model.fit(X_scaled, y_encoded)
 
