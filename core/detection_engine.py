@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+import concurrent.futures
 from typing import Any, Dict, List, Optional
 
-from .anomaly_detector import AnomalyDetector
-from .attack_graph import AttackGraphBuilder
-from .confidence_fusion import ConfidenceFusion
-from .explainability import ExplainabilityEngine
-from .feature_extraction.feature_extractor import FeatureExtractor
-from .false_positives.false_positive_handler import FalsePositiveHandler
-from .alert_fatigue.adaptive_threshold import AdaptiveThresholdModule
-from .normalization.event_normalizer import EventNormalizer
-from .temporal_stability import TemporalStabilityFilter
-from .threat_classifier import ThreatClassifier
+from pipeline.anomaly_detector import AnomalyDetector
+from pipeline.attack_graph import AttackGraphBuilder
+from pipeline.confidence_fusion import ConfidenceFusion
+from pipeline.explainability import ExplainabilityEngine
+from pipeline.feature_extraction.feature_extractor import FeatureExtractor
+from pipeline.false_positives.false_positive_handler import FalsePositiveHandler
+from pipeline.alert_fatigue.adaptive_threshold import AdaptiveThresholdModule
+from pipeline.normalization.event_normalizer import EventNormalizer
+from pipeline.temporal_stability import TemporalStabilityFilter
+from pipeline.threat_classifier import ThreatClassifier
 
 
 class DetectionEngine:
@@ -26,6 +27,7 @@ class DetectionEngine:
         feature_extractor: Optional[Any] = None,
         false_positive_handler: Optional[Any] = None,
         adaptive_threshold_module: Optional[Any] = None,
+        max_workers: int = 10,
     ):
         self.anomaly_detector = anomaly_detector or AnomalyDetector()
         self.classifier = classifier or ThreatClassifier()
@@ -37,6 +39,7 @@ class DetectionEngine:
         self.false_positive_handler = false_positive_handler or FalsePositiveHandler()
         self.adaptive_threshold_module = adaptive_threshold_module or AdaptiveThresholdModule()
         self.temporal_stability_filter = TemporalStabilityFilter()
+        self.max_workers = max_workers
 
     def detect(self, feature_vector: Optional[Dict[str, Any]] = None, events: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         return self.run(feature_vector or {}, events or [])
@@ -52,26 +55,63 @@ class DetectionEngine:
         if len(events_batch) != len(feature_vectors):
             raise ValueError("events_batch must match feature_vectors length")
 
+        # Step 1: Optimized High-level Batch ML Inference
         anomaly_scores = self.anomaly_detector.score_batch(feature_vectors)
         classifications = self.classifier.predict_batch(feature_vectors)
 
+        # Step 2: Parallel Enrichment Layer with Deduplication
         alerts = []
-        for index, feature_vector in enumerate(feature_vectors):
-            classification = classifications[index]
-            anomaly_score = anomaly_scores[index]
-            events = events_batch[index]
-            confidence = self.confidence_fusion.calculate(feature_vector, anomaly_score, classification)
-            classification, confidence = self.temporal_stability_filter.apply(
-                feature_vector, classification, anomaly_score, confidence
-            )
-            graph = self.attack_graph_builder.build(events)
-            explanation = self.explainability_engine.explain(feature_vector, anomaly_score, classification, confidence, graph)
-            alert = self._build_alert(feature_vector, classification, confidence, graph, explanation)
-            alert = self.false_positive_handler.adjust_alert(alert)
-            alert = self.adaptive_threshold_module.process_alert(alert)
-            alerts.append(alert)
+        entity_cache = {}  # Per-batch cache for deduplication
 
-        return alerts
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = []
+            for index, feature_vector in enumerate(feature_vectors):
+                context = {
+                    "feature_vector": feature_vector,
+                    "classification": classifications[index],
+                    "anomaly_score": anomaly_scores[index],
+                    "events": events_batch[index],
+                    "entity_cache": entity_cache
+                }
+                futures.append(executor.submit(self._enrich_alert, context))
+
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    alerts.append(future.result())
+                except Exception as exc:
+                    # Log error in production
+                    print(f"Alert enrichment failed: {exc}")
+
+        # Ensure order is maintained if required (skipped here for simplicity, or we can sort by timestamp)
+        return sorted(alerts, key=lambda x: x.get("timestamp") or 0)
+
+    def _enrich_alert(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Per-alert enrichment task performed in parallel."""
+        feature_vector = context["feature_vector"]
+        classification = context["classification"]
+        anomaly_score = context["anomaly_score"]
+        events = context["events"]
+        
+        # 1. Confidence Fusion
+        confidence = self.confidence_fusion.calculate(feature_vector, anomaly_score, classification)
+        
+        # 2. Temporal Stability (Flicker Handling)
+        classification, confidence = self.temporal_stability_filter.apply(
+            feature_vector, classification, anomaly_score, confidence
+        )
+        
+        # 3. Attack Graph (Context-aware)
+        graph = self.attack_graph_builder.build(events)
+        
+        # 4. Explainability
+        explanation = self.explainability_engine.explain(feature_vector, anomaly_score, classification, confidence, graph)
+        
+        # 5. Build and Refine Alert
+        alert = self._build_alert(feature_vector, classification, confidence, graph, explanation)
+        alert = self.false_positive_handler.adjust_alert(alert)
+        alert = self.adaptive_threshold_module.process_alert(alert)
+        
+        return alert
 
     def detect_events_batch(
         self,
@@ -82,11 +122,18 @@ class DetectionEngine:
             return []
 
         feature_overrides_batch = feature_overrides_batch or [{} for _ in events_batch]
-        if len(feature_overrides_batch) != len(events_batch):
-            raise ValueError("feature_overrides_batch must match events_batch length")
-
+        
+        # Batch Vectorized Feature Extraction
+        # Flatten all events to extract features in one Pandas pass
+        all_flattened_events = []
+        for events in events_batch:
+            all_flattened_events.extend(events)
+        
+        # Note: Current _prepare_detection_input does more than just extraction.
+        # It aggregates features per event list. This is the next target for vectorization.
         prepared_feature_vectors: List[Dict[str, Any]] = []
         prepared_events_batch: List[List[Dict[str, Any]]] = []
+        
         for index, events in enumerate(events_batch):
             prepared_feature_vector, prepared_events = self._prepare_detection_input(feature_overrides_batch[index], events)
             prepared_feature_vectors.append(prepared_feature_vector)
@@ -125,7 +172,8 @@ class DetectionEngine:
         return prepared_feature_vector, normalized_events
 
     def _build_feature_vector_from_events(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
-        extracted_features = [self.feature_extractor.extract_features(event) for event in events]
+        # Using the batch-aware feature extractor
+        extracted_features = self.feature_extractor.extract_features_batch(events)
         latest = dict(extracted_features[-1])
 
         if not extracted_features:

@@ -11,7 +11,7 @@ from typing import Any, Deque, Dict, List, Tuple
 from urllib.parse import unquote
 
 from demo.demo_runner import DashboardSimulator, DemoRunner, ScenarioPlayer
-from main import build_detection_engine, refresh_detection_engine
+from .main import build_detection_engine, refresh_detection_engine
 from pipeline.config import get_runtime_settings
 from pipeline.ingestion.event_ingestor import EventIngestor
 from pipeline.llm import LLMConfigurationError, LLMAssistantError, SOCAssistant
@@ -32,7 +32,7 @@ assistant = SOCAssistant()
 event_store = JsonlStore(settings.event_archive_path) if settings.persist_events else None
 alert_store = JsonlStore(settings.alert_archive_path) if settings.persist_alerts else None
 ingestor = EventIngestor(archive_store=event_store)
-frontend_dist = Path(__file__).resolve().parent / "frontend" / "dist"
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
 class InMemoryRateLimiter:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections import Counter, deque
 from typing import Any, Deque, Dict
 
@@ -9,6 +10,7 @@ class TemporalStabilityFilter:
         self.max_history = max_history
         self.consensus_threshold = consensus_threshold
         self.history: Dict[str, Deque[Dict[str, Any]]] = {}
+        self._lock = threading.Lock()
 
     def apply(
         self,
@@ -18,22 +20,28 @@ class TemporalStabilityFilter:
         confidence: str,
     ) -> tuple[Dict[str, Any], str]:
         signature = self._entity_signature(feature_vector)
-        history = self.history.setdefault(signature, deque(maxlen=self.max_history))
+        
+        with self._lock:
+            history = self.history.setdefault(signature, deque(maxlen=self.max_history))
 
-        entry = {
-            "category": classification.get("threat_category", "unknown"),
-            "confidence": self._as_float(classification.get("confidence"), 0.0),
-            "anomaly_score": float(anomaly_score),
-            "severity": classification.get("severity", "medium"),
-        }
-        history.append(entry)
+            entry = {
+                "category": classification.get("threat_category", "unknown"),
+                "confidence": self._as_float(classification.get("confidence"), 0.0),
+                "anomaly_score": float(anomaly_score),
+                "severity": classification.get("severity", "medium"),
+            }
+            history.append(entry)
+            
+            # Create a local copy of history to work on outside the lock if needed, 
+            # but here we just process quickly inside the lock.
+            history_snapshot = list(history)
 
-        if len(history) < 3:
+        if len(history_snapshot) < 3:
             return classification, confidence
 
-        consensus_category, consensus_ratio = self._consensus_category(history)
-        avg_confidence = sum(item["confidence"] for item in history) / len(history)
-        avg_anomaly = sum(item["anomaly_score"] for item in history) / len(history)
+        consensus_category, consensus_ratio = self._consensus_category(history_snapshot)
+        avg_confidence = sum(item["confidence"] for item in history_snapshot) / len(history_snapshot)
+        avg_anomaly = sum(item["anomaly_score"] for item in history_snapshot) / len(history_snapshot)
 
         adjusted = dict(classification)
         adjusted_explanation = adjusted.setdefault("explanation", {})
@@ -65,7 +73,7 @@ class TemporalStabilityFilter:
         destination_ip = str(feature_vector.get("destination_ip", feature_vector.get("dest_ip", "unknown")))
         return f"{user}|{host}|{source_ip}|{destination_ip}"
 
-    def _consensus_category(self, history: Deque[Dict[str, Any]]) -> tuple[str, float]:
+    def _consensus_category(self, history: List[Dict[str, Any]]) -> tuple[str, float]:
         counter = Counter(entry["category"] for entry in history)
         category, count = counter.most_common(1)[0]
         return category, count / len(history)
@@ -89,3 +97,4 @@ class TemporalStabilityFilter:
             return float(value)
         except (TypeError, ValueError):
             return default
+

@@ -2,20 +2,20 @@
 
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthCredential
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from api_models import (
+from .api_models import (
     EventRequest, BatchEventRequest, DetectionResponse, AlertResponse,
     HealthResponse, AuthResponse, ErrorResponse, BatchDetectionResponse,
     ThreatSeverity, LoginRequest
 )
+from .detection_engine import DetectionEngine
 from pipeline.config_prod import API_CONFIG, SECURITY_CONFIG, DETECTION_CONFIG
-from pipeline.mlops.base_model import MockAnomalyDetector, MockThreatClassifier
 from pipeline.security.auth_manager import AuthManager, get_mock_user
 from pipeline.security.rbac import Permission, check_permission
 from pipeline.logging_enhanced import get_logger
@@ -46,16 +46,16 @@ auth_manager = AuthManager(
 )
 security = HTTPBearer()
 
-# Initialize mock models
-anomaly_detector = MockAnomalyDetector()
-threat_classifier = MockThreatClassifier()
+# Initialize detection engine
+engine = DetectionEngine()
 
 # In-memory storage for alerts (replace with database in production)
 alerts_db = {}
 
 
 # Dependency: Get current user from token
-async def get_current_user(credentials: HTTPAuthCredential = Depends(security)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+
     """Extract and verify JWT token."""
     try:
         payload = auth_manager.verify_token(credentials.credentials)
@@ -129,24 +129,18 @@ async def detect_single_event(
     try:
         logger.info(f"Detecting threat in event {event.event_id}")
         
-        # Create feature vector (mock)
-        import numpy as np
-        features = np.array([[
-            event.payload_bytes, event.duration_sec, event.port, 1, 0, 0, 0, 0, 0, 0
-        ]])
+        # Convert pydantic model to dict for the engine
+        event_dict = event.dict()
         
-        # Anomaly detection
-        anomaly_result = anomaly_detector.detect(features)
-        
-        # Threat classification
-        threat_result = threat_classifier.classify(features)
+        # Use the engine for detection
+        result = engine.detect_events([event_dict])
         
         return DetectionResponse(
             event_id=event.event_id,
-            anomaly_score=float(anomaly_result['anomaly_score'][0]),
-            is_anomaly=bool(anomaly_result['is_anomaly'][0]),
-            predicted_threat=threat_result['threat_class'][0],
-            threat_confidence=float(threat_result['confidence'][0]),
+            anomaly_score=float(result.get("anomaly_score", 0.0)),
+            is_anomaly=result.get("confidence") == "high" or result.get("anomaly_score", 0.0) > 0.7,
+            predicted_threat=result.get("threat_category", "unknown"),
+            threat_confidence=float(result.get("risk_score", 0.0) / 100.0),
             timestamp=event.timestamp
         )
     except Exception as e:
@@ -164,13 +158,26 @@ async def detect_batch(
         batch_id = batch.batch_id or str(uuid.uuid4())
         logger.info(f"Processing batch {batch_id} with {len(batch.events)} events")
         
+        # Convert list of pydantic models to list of dicts
+        events_dicts = [[ev.dict()] for ev in batch.events]
+        
+        # Use the engine's batch capability (parallel processing)
+        batch_results = engine.detect_events_batch(events_dicts)
+        
         results = []
         anomaly_count = 0
         
-        for event in batch.events:
-            result = await detect_single_event(event, current_user)
-            results.append(result)
-            if result.is_anomaly:
+        for idx, res in enumerate(batch_results):
+            is_anomaly = res.get("confidence") == "high" or res.get("anomaly_score", 0.0) > 0.7
+            results.append(DetectionResponse(
+                event_id=batch.events[idx].event_id,
+                anomaly_score=float(res.get("anomaly_score", 0.0)),
+                is_anomaly=is_anomaly,
+                predicted_threat=res.get("threat_category", "unknown"),
+                threat_confidence=float(res.get("risk_score", 0.0) / 100.0),
+                timestamp=batch.events[idx].timestamp
+            ))
+            if is_anomaly:
                 anomaly_count += 1
         
         return BatchDetectionResponse(

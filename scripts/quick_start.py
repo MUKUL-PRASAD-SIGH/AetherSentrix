@@ -79,7 +79,7 @@ def main():
     print("""
 To start the API server, run:
 
-    python -m uvicorn api_v2:app --reload --host 0.0.0.0 --port 8000
+    python -m uvicorn core.api_v2:app --reload --host 0.0.0.0 --port 8000
 
 This will:
   - Start the API on http://localhost:8000
@@ -139,8 +139,8 @@ Security:
   ✅ pipeline/security/encryption.py   - Data encryption
   
 API:
-  ✅ api_v2.py                        - FastAPI application  (READY)
-  ✅ api_models.py                    - Pydantic schemas    (READY)
+  ✅ core/api_v2.py                   - FastAPI application  (READY)
+  ✅ core/api_models.py               - Pydantic schemas    (READY)
   
 Testing:
   ✅ tests/conftest.py                - Pytest configuration
@@ -210,7 +210,7 @@ See IMPLEMENTATION_COMPLETE.md for full research roadmap.
     print("✅ Quick Start Complete!")
     print(f"{'='*60}\n")
     print("Next steps:")
-    print("  1. Start the API: python -m uvicorn api_v2:app --reload")
+    print("  1. Start the API: python -m uvicorn core.api_v2:app --reload")
     print("  2. Visit http://localhost:8000/docs for interactive API docs")
     print("  3. Read IMPLEMENTATION_COMPLETE.md for research roadmap")
     print("  4. Review docs/pre_implementation/ for implementation plans")

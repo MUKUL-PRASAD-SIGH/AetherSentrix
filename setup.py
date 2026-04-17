@@ -7,7 +7,7 @@ setup(
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="AetherSentrix Team",
-    packages=find_packages(include=["pipeline", "pipeline.*", "demo"]),
+    packages=find_packages(include=["pipeline", "pipeline.*", "demo", "core", "core.*"]),
     python_requires=">=3.8",
     install_requires=[
         "python-dateutil>=2.8.2",
@@ -18,7 +18,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "aethersentrix-demo=main:run_demo",
+            "aethersentrix-demo=core.main:run_demo",
         ],
     },
 )

@@ -5,7 +5,11 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from xgboost import XGBClassifier
+try:
+    from xgboost import XGBClassifier
+except ImportError:
+    XGBClassifier = None
+
 
 from pipeline.anomaly_detector import FEATURE_KEYS
 

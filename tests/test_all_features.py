@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def log_test_result(test_name: str, success: bool, message: str = "", error: Exception = None):
     """Log test results with formatting"""
@@ -38,7 +38,7 @@ def test_imports():
     test_name = "Module Imports"
     try:
         # Core modules
-        from main import build_detection_engine
+        from core.main import build_detection_engine
         from pipeline.detection_engine import DetectionEngine
         from pipeline.explainability import ExplainabilityEngine
         from pipeline.simulation.attack_simulator import AttackSimulator, ScenarioLibrary, EventGenerator
@@ -58,7 +58,7 @@ def test_detection_engine():
     """Test detection engine initialization and basic functionality"""
     test_name = "Detection Engine"
     try:
-        from main import build_detection_engine
+        from core.main import build_detection_engine
         from pipeline.detection_engine import DetectionEngine
 
         # Build engine
@@ -162,7 +162,7 @@ def test_demo_runner():
     try:
         from demo.demo_runner import DemoRunner, ScenarioPlayer, DashboardSimulator
         from pipeline.simulation.attack_simulator import AttackSimulator, ScenarioLibrary, EventGenerator
-        from main import build_detection_engine
+        from core.main import build_detection_engine
 
         # Initialize components
         simulator = AttackSimulator(ScenarioLibrary(), EventGenerator())
@@ -291,7 +291,7 @@ def run_performance_test():
     """Run basic performance test"""
     test_name = "Performance Test"
     try:
-        from main import build_detection_engine
+        from core.main import build_detection_engine
         from pipeline.feature_extraction.feature_extractor import FeatureExtractor
         from pipeline.normalization.event_normalizer import EventNormalizer
         from pipeline.simulation.attack_simulator import EventGenerator
@@ -327,7 +327,7 @@ def test_api_endpoints():
     server = None
     server_thread = None
     try:
-        from api import create_server
+        from core.api import create_server
 
         server = create_server(port=8082)
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
