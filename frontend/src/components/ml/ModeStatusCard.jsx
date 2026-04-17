@@ -11,12 +11,13 @@ export function ModeStatusCard({ status }) {
       />
     );
   }
-
   return (
     <div className="health-card">
       <div className="mini-row wrap">
         <span className="chip">{status.active_mode || "synthetic"}</span>
-        <span className="chip">{status.active_version || "no real version yet"}</span>
+        <span className="chip">
+          {status.active_version || "no real version yet"}
+        </span>
         <span className="chip">
           {status.real_mode_available ? "real-ready" : "synthetic-only"}
         </span>

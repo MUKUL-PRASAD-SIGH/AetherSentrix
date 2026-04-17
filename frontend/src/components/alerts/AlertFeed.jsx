@@ -1,6 +1,10 @@
 import React from "react";
+import {
+  buildAlertSummary,
+  formatTimestamp,
+  humanize,
+} from "../../utils/helpers";
 import { EmptyState } from "../ui/EmptyState";
-import { humanize, formatTimestamp, buildAlertSummary } from "../../utils/helpers";
 
 export function AlertFeed({ alerts, selectedAlertId, onSelect }) {
   if (!alerts.length) {
@@ -18,7 +22,9 @@ export function AlertFeed({ alerts, selectedAlertId, onSelect }) {
         <button
           key={alert.alert_id}
           className={
-            alert.alert_id === selectedAlertId ? "alert-card active" : "alert-card"
+            alert.alert_id === selectedAlertId
+              ? "alert-card active"
+              : "alert-card"
           }
           onClick={() => onSelect(alert.alert_id)}
         >
@@ -26,7 +32,9 @@ export function AlertFeed({ alerts, selectedAlertId, onSelect }) {
             <span className={`severity-pill ${alert.severity || "low"}`}>
               {humanize(alert.severity || "low")}
             </span>
-            <span className="alert-time">{formatTimestamp(alert.timestamp)}</span>
+            <span className="alert-time">
+              {formatTimestamp(alert.timestamp)}
+            </span>
           </div>
           <strong>{humanize(alert.threat_category || "unknown")}</strong>
           <p>{buildAlertSummary(alert)}</p>

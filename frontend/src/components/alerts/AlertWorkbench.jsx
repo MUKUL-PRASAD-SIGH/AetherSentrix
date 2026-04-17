@@ -1,7 +1,11 @@
 import React from "react";
+import {
+  buildAlertSummary,
+  confidenceToScore,
+  humanize,
+} from "../../utils/helpers";
 import { EmptyState } from "../ui/EmptyState";
 import { JsonBlock } from "../ui/JsonBlock";
-import { humanize, buildAlertSummary, confidenceToScore } from "../../utils/helpers";
 
 export function AlertWorkbench({ alert }) {
   if (!alert) {
@@ -47,8 +51,8 @@ export function AlertWorkbench({ alert }) {
       <div className="detail-block">
         <h4>Suggested playbook</h4>
         <ul className="flat-list">
-          {(alert.suggested_playbook || []).map((step, index) => (
-            <li key={`${step}-${index}`}>{String(step)}</li>
+          {(alert.suggested_playbook || []).map((step, i) => (
+            <li key={`${step}-${i}`}>{String(step)}</li>
           ))}
         </ul>
       </div>

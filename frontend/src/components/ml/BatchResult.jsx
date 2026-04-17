@@ -11,7 +11,6 @@ export function BatchResult({ result }) {
       />
     );
   }
-
   return (
     <div className="ingest-result">
       <div className="mini-row wrap">

@@ -1,5 +1,5 @@
 import React from "react";
-import { Legend } from "./Legend";
+import { Legend } from "../ui/Legend";
 
 export function SeverityDial({ distribution }) {
   const total = Object.values(distribution || {}).reduce(

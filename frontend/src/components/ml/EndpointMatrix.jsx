@@ -19,7 +19,6 @@ export function EndpointMatrix() {
     "POST /ml/mode",
     "POST /assistant",
   ];
-
   return (
     <div className="endpoint-matrix">
       {entries.map((entry) => (

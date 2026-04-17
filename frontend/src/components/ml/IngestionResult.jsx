@@ -11,7 +11,6 @@ export function IngestionResult({ result }) {
       />
     );
   }
-
   return (
     <div className="ingest-result">
       <div className="mini-row wrap">

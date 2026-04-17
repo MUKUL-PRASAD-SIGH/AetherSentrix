@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   BANK_TEMPLATES,
   PORTAL_ROLES,
   PORTAL_SCENARIOS,
-  BANKTHINK_ENDPOINTS,
   DEFAULT_PORTAL_ISSUES,
+  BANKTHINK_ENDPOINTS,
   BANKTHINK_GUIDES,
 } from "../../utils/constants";
 import {
@@ -44,7 +44,9 @@ export function BankPortalSandbox({
   const [selectedEndpointId, setSelectedEndpointId] = useState(
     BANKTHINK_ENDPOINTS[0].id,
   );
-  const [issueDraft, setIssueDraft] = useState(DEFAULT_PORTAL_ISSUES.join("\n"));
+  const [issueDraft, setIssueDraft] = useState(
+    DEFAULT_PORTAL_ISSUES.join("\n"),
+  );
   const [simulatedIssues, setSimulatedIssues] = useState(() =>
     buildSimulatedIssues(
       DEFAULT_PORTAL_ISSUES.join("\n"),
@@ -68,7 +70,7 @@ export function BankPortalSandbox({
     setSimulatedIssues(
       buildSimulatedIssues(issueDraft, role.id, activeScenarioId),
     );
-  }, [role.id, activeScenarioId, issueDraft]);
+  }, [role.id, activeScenarioId]);
 
   const activeModule =
     modules.find((item) => item.id === activeModuleId) || modules[0];
@@ -100,7 +102,7 @@ export function BankPortalSandbox({
 
   function handleIssueSimulation() {
     setSimulatedIssues(
-      buildSimulatedIssues(issueDraft, role.id, activeScenario.id),
+      buildSimulatedIssues(issueDraft, role.id, activeScenarioId),
     );
   }
 
@@ -108,7 +110,7 @@ export function BankPortalSandbox({
     const nextDraft = DEFAULT_PORTAL_ISSUES.join("\n");
     setIssueDraft(nextDraft);
     setSimulatedIssues(
-      buildSimulatedIssues(nextDraft, role.id, activeScenario.id),
+      buildSimulatedIssues(nextDraft, role.id, activeScenarioId),
     );
   }
 
@@ -524,10 +526,11 @@ export function BankPortalSandbox({
             }
             onClick={() => setSelectedEndpointId(item.id)}
           >
-            <strong>
+            <span>
               {item.method} {item.path}
-            </strong>
-            <p>{item.purpose}</p>
+            </span>
+            <strong>{item.owner}</strong>
+            <small>{item.purpose}</small>
           </button>
         ))}
       </section>

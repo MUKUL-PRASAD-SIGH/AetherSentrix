@@ -11,7 +11,6 @@ export function TrainingResultCard({ run }) {
       />
     );
   }
-
   return (
     <div className="ingest-result">
       <div className="mini-row wrap">

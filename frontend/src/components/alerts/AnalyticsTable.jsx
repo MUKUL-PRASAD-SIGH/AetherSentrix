@@ -1,6 +1,10 @@
 import React from "react";
+import {
+  confidenceToScore,
+  formatTimestamp,
+  humanize,
+} from "../../utils/helpers";
 import { EmptyState } from "../ui/EmptyState";
-import { humanize, formatTimestamp, confidenceToScore } from "../../utils/helpers";
 
 export function AnalyticsTable({ alerts }) {
   if (!alerts.length) {

@@ -1,5 +1,8 @@
 import React from "react";
-import { LEGACY_ACCESS_STEPS, BANK_JOURNEYS } from "../../utils/constants";
+import {
+  LEGACY_ACCESS_STEPS,
+  BANK_JOURNEYS,
+} from "../../utils/constants";
 
 export function LegacyAccessPanel({ isConnected, alertsCount }) {
   return (

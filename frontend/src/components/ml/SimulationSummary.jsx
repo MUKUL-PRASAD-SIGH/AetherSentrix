@@ -1,7 +1,7 @@
 import React from "react";
+import { humanize, buildAlertSummary } from "../../utils/helpers";
 import { EmptyState } from "../ui/EmptyState";
 import { JsonBlock } from "../ui/JsonBlock";
-import { humanize, buildAlertSummary } from "../../utils/helpers";
 
 export function SimulationSummary({ report, alert }) {
   if (!report) {
@@ -12,7 +12,6 @@ export function SimulationSummary({ report, alert }) {
       />
     );
   }
-
   return (
     <div className="simulation-summary">
       <div className="mini-row wrap">

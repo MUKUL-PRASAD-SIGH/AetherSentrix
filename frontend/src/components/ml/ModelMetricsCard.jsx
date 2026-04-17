@@ -1,7 +1,7 @@
 import React from "react";
+import { formatMetric } from "../../utils/helpers";
 import { EmptyState } from "../ui/EmptyState";
 import { JsonBlock } from "../ui/JsonBlock";
-import { formatMetric } from "../../utils/helpers";
 
 export function ModelMetricsCard({ status }) {
   if (!status?.active_run) {
@@ -12,7 +12,6 @@ export function ModelMetricsCard({ status }) {
       />
     );
   }
-
   const classifierMetrics = status.active_run.metrics?.classifier || {};
   const anomalyMetrics = status.active_run.metrics?.anomaly || {};
   const recommendations = status.recommendations || [];
@@ -49,8 +48,8 @@ export function ModelMetricsCard({ status }) {
           </ul>
         ) : (
           <p className="panel-subtitle">
-            No issues flagged yet. Keep adding real labeled traffic and retraining
-            after feedback cycles.
+            No issues flagged yet. Keep adding real labeled traffic and
+            retraining after feedback cycles.
           </p>
         )}
       </div>
