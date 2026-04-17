@@ -2,7 +2,7 @@ export const DEFAULT_API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080";
 
 export const APP_SURFACES = [
-  { id: "saas", label: "SaaS Platform" },
+  { id: "saas", label: "Platform" },
   { id: "portal", label: "Bank Portal" },
   { id: "console", label: "Security Console" },
 ];
@@ -476,4 +476,139 @@ export const COMPATIBILITY_AREAS = [
   "AML, fraud, and case management",
   "Identity providers and SSO",
   "Notifications, document vaults, and audit archives",
+];
+
+export const ENGINE_SURFACES = [
+  {
+    id: "detection",
+    icon: "📡",
+    title: "Detection Engine",
+    focus: "Network, Endpoint, & API Ingestion",
+    utility:
+      "Real-time ingestion of 500+ events/sec across unified schemas.",
+    color: "accent",
+  },
+  {
+    id: "explainability",
+    icon: "🧠",
+    title: "Explainability Lab",
+    focus: "AI Classification & Reasoning",
+    utility:
+      '"Why was this flagged?" — Moving beyond black-box alerts to plain-English logic.',
+    color: "warm",
+  },
+  {
+    id: "simulation",
+    icon: "🎯",
+    title: "Simulation Sandbox",
+    focus: "Adversarial Playbooks",
+    utility:
+      'Automated "Simulation-to-Detection" loops to validate defenses before an attack.',
+    color: "success",
+  },
+];
+
+export const SIGNAL_LAYERS = [
+  {
+    id: "network",
+    label: "Network Layer",
+    analysis: "Flow logs (IP / Port / Protocol)",
+    detects: "C2 Beaconing",
+    color: "accent",
+    icon: "🌐",
+  },
+  {
+    id: "endpoint",
+    label: "Endpoint Layer",
+    analysis: "Process execution & registry changes",
+    detects: "Lateral Movement",
+    color: "warm",
+    icon: "💻",
+  },
+  {
+    id: "application",
+    label: "Application Layer",
+    analysis: "HTTP / API payload inspection",
+    detects: "Credential Stuffing & Exfiltration",
+    color: "danger",
+    icon: "🔗",
+  },
+];
+
+export const THREAT_CATEGORIES = [
+  {
+    id: "brute-force",
+    mitre: "T1110",
+    title: "Brute Force Detection",
+    description:
+      "Identifies distributed credential stuffing via failed auth patterns across multiple endpoints.",
+    severity: "high",
+    color: "danger",
+    icon: "🔓",
+  },
+  {
+    id: "lateral-movement",
+    mitre: "T1021",
+    title: "Lateral Movement",
+    description:
+      "Flags unusual internal traffic between endpoints post-compromise using temporal analysis.",
+    severity: "high",
+    color: "warm",
+    icon: "🕸️",
+  },
+  {
+    id: "exfiltration",
+    mitre: "T1041",
+    title: "Data Exfiltration",
+    description:
+      "Monitors outbound volume spikes and destination reputation scoring in real time.",
+    severity: "critical",
+    color: "danger",
+    icon: "📤",
+  },
+  {
+    id: "c2-beacon",
+    mitre: "T1071",
+    title: "C2 Beaconing",
+    description:
+      'Detects periodic, low-volume "heartbeat" signals to external IPs with interval analysis.',
+    severity: "medium",
+    color: "warning",
+    icon: "📡",
+  },
+];
+
+export const LEGACY_SCENARIO_STEPS = [
+  {
+    phase: "Ingestion",
+    icon: "📥",
+    title: "Dormant Identity Resurfaces",
+    description:
+      "A dormant admin identity (Legacy User) logs in from an unfamiliar IP. The ingestion engine normalizes the event across network and application layers.",
+    status: "normal",
+  },
+  {
+    phase: "Detection",
+    icon: "🔍",
+    title: "Privilege Drift Detected",
+    description:
+      "The AI notes Privilege Drift — the user is accessing sensitive API endpoints not touched in 180 days. SNN flags the temporal anomaly.",
+    status: "warning",
+  },
+  {
+    phase: "Explainability",
+    icon: "🧠",
+    title: "Cross-Layer Correlation",
+    description:
+      "The system flags this as Critical (Confidence: 94%) because the network signal (unusual IP) matches the application signal (dormant login). LNN classifies as insider threat.",
+    status: "danger",
+  },
+  {
+    phase: "Action",
+    icon: "🚨",
+    title: "Dynamic Playbook Triggered",
+    description:
+      "The engine generates a Dynamic Playbook: isolate the endpoint, step up MFA, notify the SOC analyst, and create an investigation timeline.",
+    status: "critical",
+  },
 ];

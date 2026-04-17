@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import LandingPage from "./LandingPage";
+import "./landing.css";
 
 // Constants
 import {
@@ -594,134 +596,15 @@ export default function App() {
         />
 
         {activeSurface === "saas" ? (
-          <>
-            <section className="landing-hero">
-              <div className="landing-copy">
-                <div className="eyebrow">Banking SaaS Platform</div>
-                <div className="hero-kicker">
-                  <span className="live-dot" />
-                  Multi-tenant product plus separate testable bank portal
-                </div>
-                <h1>
-                  Ship a bank-ready SaaS platform and a separate tenant portal
-                  without hardcoding it to one bank.
-                </h1>
-                <p>
-                  AetherSentrix now frames itself as a SaaS foundation for
-                  banks: white-label portals, internal staff workspaces,
-                  privileged-access controls, and a dedicated security console
-                  running underneath the product.
-                </p>
-                <div className="hero-actions">
-                  <button
-                    className="primary-button"
-                    onClick={() => navigateSurface("portal")}
-                  >
-                    Launch Test Portal
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => {
-                      navigateSurface("console");
-                      setConsoleOpen(true);
-                      setActiveTab("overview");
-                    }}
-                  >
-                    Open Security Console
-                  </button>
-                </div>
-                <div className="landing-pills">
-                  <span className="chip">White-label tenants</span>
-                  <span className="chip">Customer and staff journeys</span>
-                  <span className="chip">Legacy credential controls</span>
-                  <span className="chip">API-first integrations</span>
-                </div>
-                <SignalRibbon />
-              </div>
-              <div className="landing-visual">
-                <HeroRadar isConnected={isConnected} alerts={allAlerts} />
-                <div className="showcase-card threat">
-                  <span>Supported tenant shapes</span>
-                  <strong>{BANK_TEMPLATES.length}</strong>
-                  <small>
-                    Universal, digital-first, and branch-led bank models ready
-                    for the same platform shell
-                  </small>
-                </div>
-                <div className="showcase-card pulse">
-                  <span>SaaS capabilities</span>
-                  <strong>{SAAS_CAPABILITIES.length}</strong>
-                  <small>
-                    Product, integration, identity, and operations layers
-                    exposed in one frontend
-                  </small>
-                </div>
-                <div className="showcase-grid">
-                  <div className="showcase-mini">
-                    <strong>{BANK_JOURNEYS.length}</strong>
-                    <span>role journeys</span>
-                  </div>
-                  <div className="showcase-mini">
-                    <strong>
-                      {isConnected
-                        ? metrics.total_alerts || recentAlerts.length
-                        : "Live"}
-                    </strong>
-                    <span>
-                      {isConnected ? "active risk signals" : "risk engine"}
-                    </span>
-                  </div>
-                  <div className="showcase-mini">
-                    <strong>{COMPATIBILITY_AREAS.length}</strong>
-                    <span>integration zones</span>
-                  </div>
-                  <div className="showcase-mini">
-                    <strong>
-                      {assistantHealth?.configured ? "guarded" : "manual"}
-                    </strong>
-                    <span>decision mode</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="trust-strip">
-              <span>Multi-tenant product shell</span>
-              <span>Separate test portal</span>
-              <span>Internal maker-checker flows</span>
-              <span>Legacy credential detection</span>
-              <span>Simulation-driven validation</span>
-            </section>
-
-            <section className="feature-marquee">
-              {SAAS_CAPABILITIES.map((capability) => (
-                <FeatureCard
-                  key={capability.title}
-                  title={capability.title}
-                  description={capability.description}
-                />
-              ))}
-            </section>
-
-            <section className="content-grid bank-story-grid">
-              <BankRolePanel />
-              <WorkspaceMatrixPanel />
-              <LegacyAccessPanel
-                isConnected={isConnected}
-                alertsCount={allAlerts.length}
-              />
-            </section>
-
-            <section className="content-grid saas-proof-grid">
-              <CompatibilityPanel />
-              <SaaSReadinessPanel />
-              <DeploymentPanel
-                backendStatus={backendHealth?.status || "offline"}
-                alertsCount={allAlerts.length}
-                endpointCount={ENDPOINT_COUNT}
-              />
-            </section>
-          </>
+          <LandingPage
+            isConnected={isConnected}
+            metrics={metrics}
+            scenarios={scenarios}
+            backendHealth={backendHealth}
+            navigateSurface={navigateSurface}
+            setConsoleOpen={setConsoleOpen}
+            setActiveTab={setActiveTab}
+          />
         ) : null}
 
         {activeSurface === "portal" ? (
