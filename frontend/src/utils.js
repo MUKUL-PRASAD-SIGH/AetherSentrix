@@ -187,3 +187,224 @@ export function normalizeClientError(apiBaseUrl, error) {
 export function getConnectionIssue(apiBaseUrl, error) {
   return { message: normalizeClientError(apiBaseUrl, error).message };
 }
+
+
+export async function parseResponse(response) {
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const errorPayload =
+      payload?.error && typeof payload.error === "object"
+        ? payload.error
+        : {
+            message:
+              payload?.error ||
+              `Request failed with status ${response.status}`,
+          };
+    const error = new Error(errorPayload.message || "Request failed");
+    error.status = response.status;
+    error.details = errorPayload.details || null;
+    throw error;
+  }
+  return payload;
+}
+
+export function buildPortalModules(template, roleId) {
+  if (roleId === "customer") {
+    return [
+      { id: "overview", label: "Overview", caption: "Portfolio and balances" },
+      { id: "accounts", label: "Accounts", caption: "CASA and deposits" },
+      { id: "payments", label: "Payments", caption: "Transfers and beneficiaries" },
+      { id: "cards", label: "Cards", caption: "Controls and disputes" },
+      { id: "loans", label: "Loans", caption: "EMI and applications" },
+      { id: "service", label: "Service Hub", caption: "Tickets and requests" },
+    ];
+  }
+  if (roleId === "employee") {
+    return [
+      { id: "desk", label: "Relationship Desk", caption: "360 customer service" },
+      { id: "approvals", label: "Approvals", caption: "Maker-checker queues" },
+      { id: "kyc", label: "KYC Desk", caption: "Document and onboarding review" },
+      { id: "cases", label: "Cases", caption: "Disputes and servicing" },
+      { id: "limits", label: "Limits", caption: "Cards, payouts, and overrides" },
+      { id: "audit", label: "Audit Trail", caption: "Notes, trace, and sign-off" },
+    ];
+  }
+  return [
+    { id: "sandbox", label: "Session Sandbox", caption: "Contained session view" },
+    { id: "privileged", label: "Privileged Access", caption: "Role drift and risky reach" },
+    { id: "policy", label: "Policy Checks", caption: "Controls and exceptions" },
+    { id: "analyst", label: "Analyst Review", caption: "Verdict workflow" },
+    { id: "forensics", label: "Forensics", caption: "Device, IP, and sequence evidence" },
+    { id: "offboarding", label: "Offboarding", caption: "Identity retirement gaps" },
+  ];
+}
+
+export function buildPortalActivity(roleId, templateName, moduleLabel) {
+  if (roleId === "customer") {
+    return [
+      {
+        title: `${moduleLabel} touchpoint opened`,
+        detail: `A customer session moved into ${moduleLabel} within ${templateName} and is being tracked for friction and trust anomalies.`,
+        status: "pending",
+      },
+      {
+        title: "Payment and card handoff",
+        detail: "A high-value transfer and a card-control request are both ready for step-up or service-desk review.",
+        status: "open",
+      },
+      {
+        title: "Service case watch",
+        detail: "BankThink is watching for broken self-service flows before they spill into branch or call-center queues.",
+        status: "review",
+      },
+    ];
+  }
+
+  if (roleId === "employee") {
+    return [
+      {
+        title: `${moduleLabel} queue updated`,
+        detail: "Fresh operational work has landed and requires maker-checker confirmation with full audit context.",
+        status: "queued",
+      },
+      {
+        title: "Privilege-sensitive approval",
+        detail: "An employee is reviewing a request that touches customer servicing, limits, and branch escalation notes.",
+        status: "review",
+      },
+      {
+        title: "Case handoff",
+        detail: "Support, operations, and fraud teams are exchanging notes without losing auditability.",
+        status: "handoff",
+      },
+    ];
+  }
+
+  return [
+    {
+      title: "Dormant account sign-in",
+      detail: `A former employee credential set became active inside ${moduleLabel} from an unmanaged device.`,
+      status: "high risk",
+    },
+    {
+      title: "Privilege mismatch detected",
+      detail: "The session attempted to reach staff-only modules outside the expected role boundary.",
+      status: "sandboxed",
+    },
+    {
+      title: "Analyst decision pending",
+      detail: "The trust engine isolated the session and sent the final verdict to the console.",
+      status: "pending",
+    },
+  ];
+}
+
+export function buildPortalWorkspace({
+  roleId,
+  template,
+  module,
+  scenario,
+  issues,
+  isConnected,
+  alertsCount,
+}
+
+export function buildSimulatedIssues(draft, roleId, scenarioId) {
+  return String(draft || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item, index) => classifyPortalIssue(item, index, roleId, scenarioId));
+}
+
+export function classifyPortalIssue(text, index, roleId, scenarioId) {
+  const lower = text.toLowerCase();
+  const severity = inferIssueSeverity(lower);
+  const surface = inferIssueSurface(lower, roleId);
+  const endpoint = inferIssueEndpoint(lower, scenarioId);
+  const owner = inferIssueOwner(lower, roleId);
+  const status =
+    severity === "high" ? "triage now" : severity === "medium" ? "investigate" : "monitor";
+
+  return {
+    id: `issue-${index}-${surface}`,
+    title: text,
+    summary: `BankThink tagged this as a ${severity} ${surface.toLowerCase()} issue for the ${owner.toLowerCase()} lane.`,
+    severity,
+    surface,
+    endpoint,
+    owner,
+    status,
+    nextAction:
+      severity === "high"
+        ? "Reproduce immediately, review access boundaries, and compare alert output."
+        : severity === "medium"
+          ? "Validate workflow state, archive visibility, and queue ownership."
+          : "Document the behavior and keep it in regression or smoke coverage.",
+  };
+}
+
+export function inferIssueSeverity(text) {
+  if (
+    /legacy|stale|privilege|fraud|sandbox|breach|offboarding|dormant|mismatch/.test(
+      text,
+    )
+  ) {
+    return "high";
+  }
+  if (/slow|delay|stuck|fail|kyc|dispute|approval|missing/.test(text)) {
+    return "medium";
+  }
+  return "low";
+}
+
+export function inferIssueSurface(text, roleId) {
+  if (/card|payment|transfer|beneficiary/.test(text)) {
+    return "Payments";
+  }
+  if (/kyc|onboarding|document/.test(text)) {
+    return "KYC";
+  }
+  if (/legacy|stale|privilege|offboarding|sandbox|mfa/.test(text)) {
+    return "Security";
+  }
+  if (roleId === "employee") {
+    return "Operations";
+  }
+  if (roleId === "legacy") {
+    return "Access";
+  }
+  return "Service";
+}
+
+export function inferIssueEndpoint(text, scenarioId) {
+  if (/legacy|stale|privilege|sandbox|offboarding/.test(text) || scenarioId === "threat-hunt") {
+    return "POST /simulate -> POST /detect -> POST /assistant";
+  }
+  if (/log|syslog|firewall/.test(text)) {
+    return "POST /ingest/syslog -> GET /events/recent";
+  }
+  if (/batch|burst|queue|payment/.test(text)) {
+    return "POST /detect/batch -> GET /alerts/recent";
+  }
+  if (/model|false positive|accuracy/.test(text)) {
+    return "GET /ml/status -> POST /ml/train -> POST /ml/mode";
+  }
+  return "POST /ingest -> POST /detect";
+}
+
+export function inferIssueOwner(text, roleId) {
+  if (/legacy|stale|privilege|sandbox|fraud|offboarding/.test(text)) {
+    return "Security Operations";
+  }
+  if (/kyc|document|approval|queue/.test(text)) {
+    return "Operations Desk";
+  }
+  if (/card|payment|transfer/.test(text)) {
+    return "Payments Team";
+  }
+  if (roleId === "employee") {
+    return "Service Operations";
+  }
+  return "Digital Banking";
+}
