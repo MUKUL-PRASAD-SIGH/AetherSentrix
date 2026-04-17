@@ -3829,29 +3829,70 @@ function formatMetric(value) {
   return `${Math.round(value * 100)}%`;
 }
 
+function getSandboxSessionStatus(session) {
+  return session?.analyst_verdict ? "resolved" : "active";
+}
+
+function getSandboxStatusTone(session) {
+  if (!session?.analyst_verdict) {
+    return "medium";
+  }
+  if (session.analyst_verdict === "BLOCK") {
+    return "high";
+  }
+  if (session.analyst_verdict === "ALLOW") {
+    return "low";
+  }
+  return "medium";
+}
+
+function formatSandboxStatus(session) {
+  if (!session?.analyst_verdict) {
+    return "Active";
+  }
+  return `Resolved • ${humanize(session.analyst_verdict)}`;
+}
+
+function getIntentTone(label) {
+  if (label === "HACKER") {
+    return "high";
+  }
+  if (label === "LEGIT_ANOMALY") {
+    return "low";
+  }
+  return "medium";
+}
+
 function SandboxPanel({ apiBaseUrl, apiToken }) {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [verdictNote, setVerdictNote] = useState("");
 
   const fetchSessions = async () => {
     setLoading(true);
+    setError("");
     try {
       const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {};
       const res = await fetch(`${apiBaseUrl}/v1/sandbox/sessions`, { headers });
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions || []);
+        return;
       }
+      setError(`Unable to load sandbox sessions (${res.status}).`);
     } catch (err) {
       console.error("Failed to fetch sandbox sessions:", err);
+      setError("Unable to reach the sandbox API.");
     } finally {
       setLoading(false);
     }
   };
 
   const loadSessionDetails = async (sessionId) => {
+    setError("");
     try {
       const headers = apiToken ? { Authorization: `Bearer ${apiToken}` } : {};
       const res = await fetch(`${apiBaseUrl}/v1/sandbox/sessions/${sessionId}`, {
@@ -3860,17 +3901,26 @@ function SandboxPanel({ apiBaseUrl, apiToken }) {
       if (res.ok) {
         const data = await res.json();
         setSelectedSession(data);
+        return;
       }
+      setError(`Unable to load session ${truncate(sessionId, 12)} (${res.status}).`);
     } catch (err) {
       console.error("Failed to fetch session details:", err);
+      setError("Unable to load sandbox session details.");
     }
   };
 
   const submitDecision = async (verdict) => {
-    if (!selectedSession) return;
+    if (!selectedSession) {
+      return;
+    }
+    setSubmitting(true);
+    setError("");
     try {
       const headers = { "Content-Type": "application/json" };
-      if (apiToken) headers["Authorization"] = `Bearer ${apiToken}`;
+      if (apiToken) {
+        headers.Authorization = `Bearer ${apiToken}`;
+      }
 
       const res = await fetch(`${apiBaseUrl}/v1/sandbox/decision`, {
         method: "POST",
@@ -3883,31 +3933,57 @@ function SandboxPanel({ apiBaseUrl, apiToken }) {
       });
       if (res.ok) {
         setVerdictNote("");
-        fetchSessions();
-        loadSessionDetails(selectedSession.session.session_id);
+        await fetchSessions();
+        await loadSessionDetails(selectedSession.session.session_id);
+        return;
       }
+      setError(`Unable to record analyst verdict (${res.status}).`);
     } catch (err) {
       console.error("Failed to submit verdict:", err);
+      setError("Unable to submit the analyst verdict.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [apiBaseUrl, apiToken]);
+
+  const orderedSessions = [...sessions].sort((left, right) => {
+    const leftStatus = getSandboxSessionStatus(left);
+    const rightStatus = getSandboxSessionStatus(right);
+    if (leftStatus !== rightStatus) {
+      return leftStatus === "active" ? -1 : 1;
+    }
+    return (right.sandboxed_at || 0) - (left.sandboxed_at || 0);
+  });
+
+  const activeCount = orderedSessions.filter(
+    (session) => getSandboxSessionStatus(session) === "active",
+  ).length;
+  const resolvedCount = orderedSessions.length - activeCount;
+  const sessionState = selectedSession ? getSandboxSessionStatus(selectedSession.session) : null;
 
   return (
     <section className="content-grid">
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">Active Sandboxed Sessions</div>
+          <div>
+            <div className="panel-title">Sandbox Session Queue</div>
+            <div className="panel-subtitle">
+              {activeCount} active, {resolvedCount} resolved
+            </div>
+          </div>
           <button className="ghost-button" onClick={fetchSessions}>
             Refresh
           </button>
         </div>
+        {error ? <div className="empty-state">{error}</div> : null}
         {loading ? (
           <div className="empty-state">Loading sessions...</div>
-        ) : sessions.length === 0 ? (
-          <div className="empty-state">No active sandbox sessions.</div>
+        ) : orderedSessions.length === 0 ? (
+          <div className="empty-state">No sandbox sessions have been recorded yet.</div>
         ) : (
           <table className="data-table">
             <thead>
@@ -3916,20 +3992,22 @@ function SandboxPanel({ apiBaseUrl, apiToken }) {
                 <th>Source IP</th>
                 <th>Trust Score</th>
                 <th>Status</th>
+                <th>Verdict</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {sessions.map((s) => (
+              {orderedSessions.map((s) => (
                 <tr key={s.session_id}>
                   <td>{truncate(s.session_id, 12)}</td>
                   <td>{s.source_ip}</td>
                   <td>{formatMetric(s.current_trust_score)}</td>
                   <td>
-                    <span className={`badge ${s.status === "ACTIVE" ? "badge-warning" : ""}`}>
-                      {s.status}
+                    <span className={`severity-pill ${getSandboxStatusTone(s)}`}>
+                      {formatSandboxStatus(s)}
                     </span>
                   </td>
+                  <td>{s.analyst_verdict ? humanize(s.analyst_verdict) : "Pending"}</td>
                   <td>
                     <button
                       className="ghost-button"
@@ -3955,22 +4033,43 @@ function SandboxPanel({ apiBaseUrl, apiToken }) {
               <strong>User:</strong> {selectedSession.session.user_id} <br />
               <strong>Trust Score:</strong>{" "}
               {formatMetric(selectedSession.session.current_trust_score)} <br />
+              <strong>Requests observed:</strong> {selectedSession.session.total_requests} <br />
+              <strong>Suspicious requests:</strong>{" "}
+              {selectedSession.session.suspicious_requests} <br />
               <strong>Intent Label:</strong>{" "}
-              <span className="badge badge-danger">
+              <span
+                className={`severity-pill ${getIntentTone(
+                  selectedSession.intent_classification.label,
+                )}`}
+              >
                 {selectedSession.intent_classification.label}
               </span>{" "}
               ({formatMetric(selectedSession.intent_classification.confidence)} conf)
             </div>
 
-            <div className="explanation-box" style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "8px" }}>
+            <div
+              className="explanation-box"
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                padding: "1rem",
+                borderRadius: "8px",
+              }}
+            >
               <strong>Explainability Engine Narrative:</strong>
               <p style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
                 {selectedSession.explanation.narrative}
               </p>
             </div>
 
-            {selectedSession.session.status === "ACTIVE" ? (
-              <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {sessionState === "active" ? (
+              <div
+                style={{
+                  marginTop: "1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
                 <label className="field">
                   <span>Analyst Notes</span>
                   <input
@@ -3983,23 +4082,36 @@ function SandboxPanel({ apiBaseUrl, apiToken }) {
                 <div style={{ display: "flex", gap: "1rem" }}>
                   <button
                     className="primary-button"
-                    style={{ background: "var(--success-color)", color: "black" }}
+                    style={{ background: "var(--success)", color: "#07111f" }}
                     onClick={() => submitDecision("ALLOW")}
+                    disabled={submitting}
                   >
-                    Allow (False Positive)
+                    {submitting ? "Recording..." : "Allow"}
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => submitDecision("MONITOR")}
+                    disabled={submitting}
+                  >
+                    Monitor
                   </button>
                   <button
                     className="primary-button"
-                    style={{ background: "var(--danger-color)" }}
+                    style={{ background: "var(--danger)" }}
                     onClick={() => submitDecision("BLOCK")}
+                    disabled={submitting}
                   >
-                    Block (Confirmed Hacker)
+                    Block
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="alert-detail" style={{ background: "var(--bg-accent)" }}>
-                <strong>Final Verdict:</strong> {selectedSession.session.analyst_verdict} <br/>
+              <div
+                className="alert-detail"
+                style={{ background: "rgba(255, 255, 255, 0.04)" }}
+              >
+                <strong>Final Verdict:</strong>{" "}
+                {humanize(selectedSession.session.analyst_verdict)} <br />
                 <strong>Note:</strong> {selectedSession.session.analyst_note || "None"}
               </div>
             )}
