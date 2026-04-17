@@ -1,99 +1,119 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
 
-
-FEATURE_KEYS = [
-    "login_attempt_rate",
-    "failed_login_ratio",
-    "session_duration",
-    "bytes_transferred",
-    "unique_ips",
-    "endpoint_anomaly_score",
-    "behavior_baseline_deviation",
-    "periodicity",
-    "network_confidence_score",
-]
+from pipeline.feature_schema import FEATURE_KEYS
+from pipeline.mlops.neuromorphic_models import (
+    NeuromorphicAnomalyDetector,
+)
 
 
 class AnomalyDetector:
-    def __init__(self, model=None, scaler=None, training_profile: str = "synthetic"):
+    def __init__(
+        self,
+        model: Optional[Any] = None,
+        scaler: Optional[Any] = None,
+        training_profile: str = "synthetic",
+    ):
         self.training_profile = training_profile
-        if model is None:
-            self.model = IsolationForest(
-                n_estimators=300,
-                contamination=0.05,
-                random_state=42,
-            )
-            self.scaler = scaler or StandardScaler()
-            self._train_on_synthetic_data()
-        else:
-            self.model = model
-            self.scaler = scaler or StandardScaler()
+        self.neuromorphic = model if isinstance(model, NeuromorphicAnomalyDetector) else None
 
-    def _generate_synthetic_training_dataset(self, n_samples=10000):
+        if self.neuromorphic is None:
+            self.neuromorphic = NeuromorphicAnomalyDetector(
+                feature_keys=FEATURE_KEYS,
+                model=model,
+                feature_scaler=scaler,
+                training_profile=training_profile,
+            )
+            self._train_on_synthetic_data()
+
+    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None) -> "AnomalyDetector":
+        self.neuromorphic.fit(X, y)
+        return self
+
+    def _generate_synthetic_training_dataset(self, n_samples: int = 6000):
         np.random.seed(42)
         normal_data = []
 
-        for _ in range(n_samples // 4):
-            normal_data.append({
-                "login_attempt_rate": np.random.normal(1.0, 0.3),
-                "failed_login_ratio": np.random.normal(0.05, 0.02),
-                "session_duration": np.random.normal(3600, 600),
-                "bytes_transferred": np.random.normal(1000000, 200000),
-                "unique_ips": np.random.normal(5, 2),
-                "endpoint_anomaly_score": np.random.normal(0.1, 0.05),
-                "behavior_baseline_deviation": np.random.normal(0.0, 0.1),
-                "periodicity": np.random.normal(0.0, 0.1),
-                "network_confidence_score": np.random.normal(0.8, 0.1),
-            })
+        for _ in range(n_samples // 3):
+            normal_data.append(
+                {
+                    "login_attempt_rate": np.random.normal(1.0, 0.3),
+                    "failed_login_ratio": np.random.normal(0.05, 0.02),
+                    "session_duration": np.random.normal(3600, 600),
+                    "bytes_transferred": np.random.normal(1000000, 200000),
+                    "unique_ips": np.random.normal(5, 2),
+                    "endpoint_anomaly_score": np.random.normal(0.1, 0.05),
+                    "behavior_baseline_deviation": np.random.normal(0.0, 0.1),
+                    "periodicity": np.random.normal(0.05, 0.08),
+                    "network_confidence_score": np.random.normal(0.85, 0.08),
+                }
+            )
 
-        for _ in range(n_samples // 4):
-            normal_data.append({
-                "login_attempt_rate": np.random.normal(0.5, 0.2),
-                "failed_login_ratio": np.random.normal(0.0, 0.01),
-                "session_duration": np.random.normal(1800, 300),
-                "bytes_transferred": np.random.normal(500000, 100000),
-                "unique_ips": np.random.normal(2, 1),
-                "endpoint_anomaly_score": np.random.normal(0.05, 0.03),
-                "behavior_baseline_deviation": np.random.normal(0.0, 0.05),
-                "periodicity": np.random.normal(0.0, 0.05),
-                "network_confidence_score": np.random.normal(0.9, 0.05),
-            })
+        for _ in range(n_samples // 3):
+            normal_data.append(
+                {
+                    "login_attempt_rate": np.random.normal(0.5, 0.2),
+                    "failed_login_ratio": np.random.normal(0.01, 0.01),
+                    "session_duration": np.random.normal(1800, 300),
+                    "bytes_transferred": np.random.normal(500000, 100000),
+                    "unique_ips": np.random.normal(2, 1),
+                    "endpoint_anomaly_score": np.random.normal(0.05, 0.03),
+                    "behavior_baseline_deviation": np.random.normal(0.0, 0.05),
+                    "periodicity": np.random.normal(0.0, 0.05),
+                    "network_confidence_score": np.random.normal(0.9, 0.04),
+                }
+            )
 
         anomalous_data = []
-        for _ in range(n_samples // 10):
-            anomalous_data.append({
-                "login_attempt_rate": np.random.normal(15.0, 3.0),
-                "failed_login_ratio": np.random.normal(0.8, 0.1),
-                "session_duration": np.random.normal(300, 100),
-                "bytes_transferred": np.random.normal(10000, 5000),
-                "unique_ips": np.random.normal(1, 0.5),
-                "endpoint_anomaly_score": np.random.normal(0.9, 0.1),
-                "behavior_baseline_deviation": np.random.normal(2.0, 0.5),
-                "periodicity": np.random.normal(0.1, 0.05),
-                "network_confidence_score": np.random.normal(0.3, 0.1),
-            })
+        for _ in range(n_samples // 6):
+            anomalous_data.append(
+                {
+                    "login_attempt_rate": np.random.normal(15.0, 3.0),
+                    "failed_login_ratio": np.random.normal(0.8, 0.1),
+                    "session_duration": np.random.normal(300, 100),
+                    "bytes_transferred": np.random.normal(10000, 5000),
+                    "unique_ips": np.random.normal(1, 0.5),
+                    "endpoint_anomaly_score": np.random.normal(0.9, 0.1),
+                    "behavior_baseline_deviation": np.random.normal(2.0, 0.5),
+                    "periodicity": np.random.normal(0.75, 0.1),
+                    "network_confidence_score": np.random.normal(0.3, 0.1),
+                }
+            )
 
-        all_data = normal_data + anomalous_data
-        labels = ([0] * len(normal_data)) + ([1] * len(anomalous_data))
+        burst_anomalies = []
+        for _ in range(n_samples // 6):
+            burst_anomalies.append(
+                {
+                    "login_attempt_rate": np.random.normal(7.0, 1.5),
+                    "failed_login_ratio": np.random.normal(0.45, 0.08),
+                    "session_duration": np.random.normal(900, 200),
+                    "bytes_transferred": np.random.normal(12000000, 3000000),
+                    "unique_ips": np.random.normal(12, 3),
+                    "endpoint_anomaly_score": np.random.normal(0.7, 0.08),
+                    "behavior_baseline_deviation": np.random.normal(1.3, 0.3),
+                    "periodicity": np.random.normal(0.9, 0.05),
+                    "network_confidence_score": np.random.normal(0.45, 0.1),
+                }
+            )
+
+        all_data = normal_data + anomalous_data + burst_anomalies
+        labels = ([0] * len(normal_data)) + ([1] * len(anomalous_data)) + ([1] * len(burst_anomalies))
         return np.array([self._features_from_dict(sample) for sample in all_data]), np.array(labels)
 
-    def _generate_synthetic_training_data(self, n_samples=10000):
+    def _generate_synthetic_training_data(self, n_samples: int = 6000):
         data, _ = self._generate_synthetic_training_dataset(n_samples=n_samples)
         return data
 
     def _train_on_synthetic_data(self):
         try:
-            x_train = self._generate_synthetic_training_data()
-            x_scaled = self.scaler.fit_transform(x_train)
-            self.model.fit(x_scaled)
-        except Exception as e:
-            print(f"ML training failed, using fallback: {e}")
+            x_train, y_train = self._generate_synthetic_training_dataset()
+            self.fit(x_train, y_train)
+        except Exception:
+            # The detector falls back to heuristic scoring if training artifacts are unavailable.
+            self.neuromorphic.is_trained = False
 
     def score(self, feature_vector: Dict[str, Any]) -> float:
         return self.score_batch([feature_vector])[0]
@@ -103,14 +123,13 @@ class AnomalyDetector:
         if not feature_vectors:
             return []
 
-        try:
-            x = np.array([self._features_from_dict(feature_vector) for feature_vector in feature_vectors])
-            x_scaled = self.scaler.transform(x)
-            scores = self.model.decision_function(x_scaled)
-            anomaly_scores = 1 / (1 + np.exp(scores))
-            return [float(score) for score in anomaly_scores]
-        except Exception:
-            return [self._fallback_score(feature_vector) for feature_vector in feature_vectors]
+        if getattr(self.neuromorphic, "is_trained", False):
+            try:
+                return self.neuromorphic.score_batch_from_dicts(feature_vectors)
+            except Exception:
+                pass
+
+        return [self._fallback_score(feature_vector) for feature_vector in feature_vectors]
 
     def predict(self, features: Any) -> float:
         if isinstance(features, dict):
@@ -126,7 +145,18 @@ class AnomalyDetector:
         endpoint_score = self._as_float(feature_vector.get("endpoint_anomaly_score"), 0.0)
         baseline_deviation = self._as_float(feature_vector.get("behavior_baseline_deviation"), 0.0)
         periodicity = self._as_float(feature_vector.get("periodicity"), 0.0)
-        return min(1.0, max(0.0, endpoint_score * 0.6 + baseline_deviation * 0.3 + periodicity * 0.1))
+        bytes_transferred = self._as_float(feature_vector.get("bytes_transferred"), 0.0)
+        transfer_pressure = min(1.0, bytes_transferred / 50_000_000.0)
+        return min(
+            1.0,
+            max(
+                0.0,
+                (endpoint_score * 0.45)
+                + (baseline_deviation * 0.25)
+                + (periodicity * 0.2)
+                + (transfer_pressure * 0.1),
+            ),
+        )
 
     def _coerce_to_feature_dict(self, values: List[Any]) -> Dict[str, float]:
         flat_values = []

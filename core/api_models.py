@@ -164,3 +164,17 @@ class AlertQueryResponse(BaseModel):
     alerts: List[AlertResponse]
     page: int = 1
     page_size: int = 100
+
+
+class WhatIfRequest(BaseModel):
+    """Counterfactual security control analysis request."""
+    scenario: Optional[str] = None
+    baseline_attack: Optional[str] = None
+    modifications: List[str] = Field(default_factory=list)
+    measure: str = "success_probability"
+    target_environment: Optional[str] = None
+
+
+class WhatIfResponse(BaseModel):
+    """Counterfactual analysis response."""
+    what_if: Dict[str, Any]

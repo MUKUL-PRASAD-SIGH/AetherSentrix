@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import LandingPage from "./LandingPage";
-import "./landing.css";
 
 // Constants
 import {

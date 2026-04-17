@@ -8,7 +8,7 @@
 
 **AetherSentrix** is an AI-powered Security Operations Center (SOC) platform that enhances cybersecurity defense through proactive threat detection. By combining advanced machine learning, spiking neural networks, and behavioral analytics, AetherSentrix detects, analyzes, and simulates cyber threats in real-time across network, endpoint, and application layers.
 
-**Key Innovation**: Implements Spiking Neural Networks (SNNs) for cybersecurity, enabling temporal processing that traditional AI cannot achieve. Includes XGBoost + Random Forest ensemble learning, transfer learning capabilities, and quantum-resistant behavioral cryptography.
+**Key Innovation**: Implements a real trainable neuromorphic stack for cybersecurity: a spiking neural encoder, a liquid-state encoder, and a hybrid XGBoost + Random Forest ensemble for temporal threat analysis.
 
 **Impact**: Reduces mean time to detect (MTTD) by 85% and mean time to respond (MTTR) by 70% through intelligent automation and predictive defense.
 
@@ -62,6 +62,23 @@ Build an AI-driven threat detection and simulation engine that analyzes signals 
 - **SOC Assistant**: Natural language queries and automated threat analysis
 - **Autonomous Hunting**: AI agents proactively discover threats
 - **Automated Response**: Intelligent playbook generation and execution
+
+## Current Implementation Status
+
+Implemented in the codebase:
+- Detection APIs, simulation APIs, and `/simulate/what-if`
+- Trainable SNN/LNN-style neuromorphic models in the live detection pipeline
+- Synthetic and real-dataset model training with registry-backed activation
+- Ingestion, explainability, trust scoring, and sandbox workflows
+
+Provided as documented extension paths rather than fully packaged integrations:
+- SIEM/SOAR connectors
+- Threat intel feed adapters
+- Production SSO / OIDC / SAML
+- Docker / Kubernetes deployment assets
+- Prometheus / Grafana observability wiring
+
+See [docs/INTEGRATION_IMPLEMENTATION_GUIDE.md](docs/INTEGRATION_IMPLEMENTATION_GUIDE.md) for the implementation steps for those integrations.
 
 ---
 
@@ -206,6 +223,8 @@ Treats security events as cryptographic signatures:
 ## 📊 **Enterprise Features**
 
 ### **SOC Integration**
+Current state: these are supported integration targets and recommended implementation paths, not all prebuilt end-to-end connectors in this repository.
+
 - **SIEM Connectors**: Splunk, ELK, QRadar, Sumo Logic
 - **SOAR Platforms**: ServiceNow, Jira, Demisto, Phantom
 - **Ticketing Systems**: Automated incident creation and tracking
@@ -218,6 +237,8 @@ Treats security events as cryptographic signatures:
 - **Regulatory**: SOC 2, ISO 27001, GDPR, HIPAA compliance ready
 
 ### **Scalability & Performance**
+Current state: the repo includes health endpoints and configuration hooks, while full Docker/Kubernetes and Prometheus/Grafana delivery is documented in the integration guide.
+
 - **Cloud-Native**: Kubernetes deployment with auto-scaling
 - **Edge Computing**: Distributed detection at network boundaries
 - **High Availability**: Multi-region redundancy and failover

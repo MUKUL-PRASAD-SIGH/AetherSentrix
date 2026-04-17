@@ -27,6 +27,25 @@ class ModelManager:
 
         metadata = bundles["metadata"]
         classifier_bundle = bundles["classifier"]
+        anomaly_bundle = bundles["anomaly"]
+
+        if isinstance(anomaly_bundle.get("model"), AnomalyDetector):
+            anomaly_detector = anomaly_bundle["model"]
+            anomaly_detector.training_profile = metadata.get("source_mode", "real")
+        else:
+            anomaly_detector = AnomalyDetector(
+                model=anomaly_bundle["model"],
+                scaler=anomaly_bundle["scaler"],
+                training_profile=metadata.get("source_mode", "real"),
+            )
+
+        if isinstance(classifier_bundle.get("model"), ThreatClassifier):
+            classifier = classifier_bundle["model"]
+            classifier.training_profile = metadata.get("source_mode", "real")
+            return {
+                "anomaly_detector": anomaly_detector,
+                "classifier": classifier,
+            }
 
         # Check if ensemble is configured
         if isinstance(classifier_bundle.get("model"), dict) and "xgb_model" in classifier_bundle["model"]:
@@ -51,11 +70,7 @@ class ModelManager:
             )
 
         return {
-            "anomaly_detector": AnomalyDetector(
-                model=bundles["anomaly"]["model"],
-                scaler=bundles["anomaly"]["scaler"],
-                training_profile=metadata.get("source_mode", "real"),
-            ),
+            "anomaly_detector": anomaly_detector,
             "classifier": classifier,
         }
 

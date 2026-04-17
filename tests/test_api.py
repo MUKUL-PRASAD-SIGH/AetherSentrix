@@ -82,6 +82,25 @@ class TestDetectionEndpoints:
         assert data["batch_id"] == "batch_001"
         assert len(data["results"]) == 2
 
+    def test_what_if_simulation(self, client, valid_token):
+        """Counterfactual control testing is exposed via the API."""
+        headers = {"Authorization": f"Bearer {valid_token}"}
+        response = client.post(
+            "/simulate/what-if",
+            json={
+                "baseline_attack": "brute_force",
+                "modifications": ["enable_2fa", "rate_limiting"],
+                "measure": "success_probability",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()["what_if"]
+        assert data["scenario"] == "brute_force_attack"
+        assert data["comparison"]["direction"] == "improved"
+        assert data["comparison"]["improvement"] > 0
+        assert data["counterfactual"]["metrics"]["success_probability"] < data["baseline"]["metrics"]["success_probability"]
+
     def test_invalid_protocol(self, client, valid_token):
         """Invalid protocol returns validation error."""
         headers = {"Authorization": f"Bearer {valid_token}"}

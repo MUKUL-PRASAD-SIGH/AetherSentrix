@@ -450,6 +450,18 @@ def test_api_endpoints():
         assert simulate_status == 200, "Simulate endpoint should return 200"
         assert "simulation" in simulate_data, "Simulate endpoint should return simulation payload"
 
+        what_if_status, what_if_data = post_json(
+            "http://127.0.0.1:8082/simulate/what-if",
+            {
+                "baseline_attack": "brute_force",
+                "modifications": ["enable_2fa", "rate_limiting"],
+                "measure": "success_probability",
+            },
+        )
+        assert what_if_status == 200, "What-if endpoint should return 200"
+        assert "what_if" in what_if_data, "What-if endpoint should return analysis payload"
+        assert what_if_data["what_if"]["comparison"]["direction"] == "improved", "What-if analysis should show improvement when controls are applied"
+
         train_status, train_data = post_json(
             "http://127.0.0.1:8082/ml/train",
             {"source_mode": "synthetic", "activate": True},

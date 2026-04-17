@@ -303,7 +303,7 @@ export const BANKTHINK_ENDPOINTS = [
   {
     id: "ingestion-health",
     method: "GET",
-    path: "/assistant/health", // I should fix this, it was /ingestion/health in App.jsx but wait...
+    path: "/ingestion/health",
     owner: "Telemetry",
     purpose: "Confirms ingestion totals and archive readiness for the simulation shell.",
     test: "Check ingested event count before and after posting test telemetry.",

@@ -11,13 +11,16 @@ from typing import Optional, List
 from .api_models import (
     EventRequest, BatchEventRequest, DetectionResponse, AlertResponse,
     HealthResponse, AuthResponse, ErrorResponse, BatchDetectionResponse,
-    ThreatSeverity, LoginRequest
+    ThreatSeverity, LoginRequest, WhatIfRequest, WhatIfResponse
 )
 from .detection_engine import DetectionEngine
 from pipeline.config_prod import API_CONFIG, SECURITY_CONFIG, DETECTION_CONFIG
 from pipeline.security.auth_manager import AuthManager, get_mock_user
 from pipeline.security.rbac import Permission, check_permission
 from pipeline.logging_enhanced import get_logger
+from pipeline.mlops import get_model_manager
+from pipeline.simulation.attack_simulator import ScenarioLibrary
+from pipeline.simulation.what_if_analyzer import CONTROL_LIBRARY, WhatIfAnalyzer
 
 logger = get_logger(__name__)
 
@@ -47,6 +50,9 @@ security = HTTPBearer()
 
 # Initialize detection engine
 engine = DetectionEngine()
+model_manager = get_model_manager()
+scenario_library = ScenarioLibrary()
+what_if_analyzer = WhatIfAnalyzer(scenario_library)
 
 # In-memory storage for alerts (replace with database in production)
 alerts_db = {}
@@ -83,12 +89,14 @@ def require_permission(permission: Permission):
 async def health_check():
     """API health and readiness check."""
     logger.info("Health check requested")
+    active_run = model_manager.get_status().get("active_run") or {}
+    architectures = active_run.get("metrics", {}).get("architectures", {})
     return HealthResponse(
         status="healthy",
         version=API_CONFIG['version'],
         models_loaded={
-            "anomaly_detector": "mock_v1.0",
-            "threat_classifier": "mock_v1.0"
+            "anomaly_detector": architectures.get("anomaly_detector", "snn_lnn_isolation_forest"),
+            "threat_classifier": architectures.get("classifier", "hybrid_snn_lnn_xgboost_rf"),
         }
     )
 
@@ -129,7 +137,7 @@ async def detect_single_event(
         logger.info(f"Detecting threat in event {event.event_id}")
         
         # Convert pydantic model to dict for the engine
-        event_dict = event.dict()
+        event_dict = event.model_dump()
         
         # Use the engine for detection
         result = engine.detect_events([event_dict])
@@ -158,7 +166,7 @@ async def detect_batch(
         logger.info(f"Processing batch {batch_id} with {len(batch.events)} events")
         
         # Convert list of pydantic models to list of dicts
-        events_dicts = [[ev.dict()] for ev in batch.events]
+        events_dicts = [[ev.model_dump()] for ev in batch.events]
         
         # Use the engine's batch capability (parallel processing)
         batch_results = engine.detect_events_batch(events_dicts)
@@ -188,6 +196,25 @@ async def detect_batch(
     except Exception as e:
         logger.error(f"Batch detection failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/simulate/what-if", response_model=WhatIfResponse)
+async def simulate_what_if(
+    request: WhatIfRequest,
+    current_user: dict = Depends(require_permission(Permission.READ_ALERTS))
+):
+    """Evaluate how selected controls change the outcome of an attack scenario."""
+    try:
+        analysis = what_if_analyzer.analyze(request.model_dump())
+        return WhatIfResponse(what_if=analysis)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": str(exc),
+                "supported_controls": sorted(CONTROL_LIBRARY),
+            },
+        )
 
 
 # ==================== Alert Management ====================
@@ -249,9 +276,15 @@ async def get_active_models(
     current_user: dict = Depends(require_permission(Permission.READ_ALERTS))
 ):
     """List currently active model versions."""
+    status = model_manager.get_status()
+    active_run = status.get("active_run") or {}
+    metrics = active_run.get("metrics", {})
+    architectures = metrics.get("architectures", {})
     return {
-        "anomaly_detector": "mock_v1.0",
-        "threat_classifier": "mock_v1.0",
+        "anomaly_detector": architectures.get("anomaly_detector", "snn_lnn_isolation_forest"),
+        "threat_classifier": architectures.get("classifier", "hybrid_snn_lnn_xgboost_rf"),
+        "mode": status.get("active_mode", "synthetic"),
+        "version": status.get("active_version"),
         "timestamp": datetime.utcnow().isoformat()
     }
 

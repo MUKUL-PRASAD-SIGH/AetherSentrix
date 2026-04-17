@@ -1,36 +1,51 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from .anomaly_detector import FEATURE_KEYS
+from .feature_schema import FEATURE_KEYS
+from .mlops.ensemble_classifier import XGBoostRFEnsemble
+from .mlops.neuromorphic_models import NeuromorphicHybridClassifier
 
 
 class ThreatClassifier:
-    def __init__(self, model=None, scaler=None, label_encoder=None, training_profile: str = "synthetic"):
+    def __init__(
+        self,
+        model: Optional[Any] = None,
+        scaler: Optional[Any] = None,
+        label_encoder: Optional[Any] = None,
+        training_profile: str = "synthetic",
+    ):
         self.training_profile = training_profile
-        if model is None:
-            self.model = RandomForestClassifier(
-                n_estimators=300,
-                max_depth=18,
-                min_samples_leaf=2,
-                min_samples_split=4,
-                random_state=42,
-                class_weight="balanced_subsample",
-                n_jobs=1,
-            )
-            self.scaler = scaler or StandardScaler()
-            self.label_encoder = label_encoder or LabelEncoder()
-            self._train_on_synthetic_data()
-        else:
-            self.model = model
-            self.scaler = scaler or StandardScaler()
-            self.label_encoder = label_encoder or LabelEncoder()
+        self.hybrid_model = model if isinstance(model, NeuromorphicHybridClassifier) else None
 
-    def _generate_synthetic_training_data(self, n_samples=5000):
+        if self.hybrid_model is None:
+            if model is None:
+                base_ensemble = XGBoostRFEnsemble()
+            elif isinstance(model, XGBoostRFEnsemble):
+                base_ensemble = model
+            else:
+                base_ensemble = self._wrap_legacy_model(
+                    model=model,
+                    scaler=scaler,
+                    label_encoder=label_encoder,
+                )
+
+            self.hybrid_model = NeuromorphicHybridClassifier(
+                feature_keys=FEATURE_KEYS,
+                ensemble=base_ensemble,
+                training_profile=training_profile,
+            )
+            self._train_on_synthetic_data()
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "ThreatClassifier":
+        self.hybrid_model.fit(X, y)
+        return self
+
+    def _generate_synthetic_training_data(self, n_samples: int = 3600):
         np.random.seed(42)
         features = []
         labels = []
@@ -51,7 +66,7 @@ class ThreatClassifier:
         ]
 
         for threat in threat_types:
-            samples_per_threat = n_samples // len(threat_types)
+            samples_per_threat = max(48, n_samples // len(threat_types))
             for _ in range(samples_per_threat):
                 features.append(self._sample_for_threat(threat))
                 labels.append(threat)
@@ -61,19 +76,25 @@ class ThreatClassifier:
     def _sample_for_threat(self, threat: str) -> List[float]:
         if threat == "normal_traffic":
             sample = [1.0, 0.05, 3600, 1000000, 5, 0.1, 0.0, 0.0, 0.8]
-            noise = [0.3, 0.02, 600, 200000, 2, 0.05, 0.1, 0.1, 0.1]
+            noise = [0.3, 0.02, 600, 200000, 2, 0.05, 0.1, 0.08, 0.08]
         elif threat == "brute_force":
-            sample = [15.0, 0.8, 300, 10000, 1, 0.9, 2.0, 0.1, 0.3]
-            noise = [3.0, 0.1, 100, 5000, 0.5, 0.1, 0.5, 0.05, 0.1]
+            sample = [15.0, 0.8, 300, 10000, 1, 0.9, 2.0, 0.2, 0.3]
+            noise = [3.0, 0.1, 100, 5000, 0.5, 0.1, 0.5, 0.06, 0.1]
         elif threat == "c2_beaconing":
             sample = [0.5, 0.0, 1800, 50000, 1, 0.7, 1.5, 0.9, 0.4]
-            noise = [0.2, 0.01, 300, 10000, 0.5, 0.1, 0.3, 0.05, 0.1]
+            noise = [0.2, 0.01, 300, 10000, 0.5, 0.1, 0.3, 0.04, 0.1]
         elif threat == "lateral_movement":
             sample = [3.0, 0.2, 1200, 200000, 8, 0.6, 1.2, 0.3, 0.5]
             noise = [1.0, 0.1, 300, 50000, 3, 0.1, 0.3, 0.1, 0.1]
         elif threat == "data_exfiltration":
             sample = [1.0, 0.0, 2400, 50000000, 3, 0.8, 1.8, 0.2, 0.6]
-            noise = [0.3, 0.01, 600, 10000000, 1, 0.1, 0.4, 0.1, 0.1]
+            noise = [0.3, 0.01, 600, 10000000, 1, 0.1, 0.4, 0.08, 0.1]
+        elif threat == "privilege_escalation":
+            sample = [4.0, 0.3, 900, 300000, 4, 0.75, 1.6, 0.45, 0.45]
+            noise = [0.7, 0.07, 250, 60000, 1.0, 0.1, 0.25, 0.1, 0.08]
+        elif threat == "ransomware":
+            sample = [2.0, 0.12, 1200, 9000000, 2, 0.95, 2.2, 0.65, 0.35]
+            noise = [0.5, 0.04, 180, 2000000, 0.6, 0.05, 0.25, 0.1, 0.08]
         else:
             sample = [2.0, 0.1, 1800, 500000, 4, 0.5, 1.0, 0.4, 0.7]
             noise = [0.8, 0.05, 400, 100000, 2, 0.15, 0.3, 0.2, 0.1]
@@ -83,11 +104,9 @@ class ThreatClassifier:
     def _train_on_synthetic_data(self):
         try:
             x_train, y_train = self._generate_synthetic_training_data()
-            x_scaled = self.scaler.fit_transform(x_train)
-            y_encoded = self.label_encoder.fit_transform(y_train)
-            self.model.fit(x_scaled, y_encoded)
-        except Exception as e:
-            print(f"ML training failed, using fallback: {e}")
+            self.fit(x_train, y_train)
+        except Exception:
+            self.hybrid_model.is_trained = False
 
     def predict(self, feature_vector: Any) -> Any:
         if isinstance(feature_vector, dict):
@@ -101,34 +120,13 @@ class ThreatClassifier:
         if not feature_vectors:
             return []
 
-        try:
-            x = np.array([self._features_from_dict(feature_vector) for feature_vector in feature_vectors])
-            x_scaled = self.scaler.transform(x)
-            prediction_encoded = self.model.predict(x_scaled)
-            predictions = self.label_encoder.inverse_transform(prediction_encoded)
-            probabilities = self.model.predict_proba(x_scaled)
+        if getattr(self.hybrid_model, "is_trained", False):
+            try:
+                return self.hybrid_model.predict_batch(feature_vectors)
+            except Exception:
+                pass
 
-            results = []
-            for index, prediction in enumerate(predictions):
-                max_prob = float(np.max(probabilities[index]))
-                results.append(self._format_prediction(feature_vectors[index], prediction, max_prob))
-            return results
-        except Exception:
-            return [self._rule_based_predict(feature_vector) for feature_vector in feature_vectors]
-
-    def _features_from_dict(self, feature_vector: Dict[str, Any]) -> List[float]:
-        return [self._as_float(feature_vector.get(key), 0.0) for key in FEATURE_KEYS]
-
-    def _format_prediction(self, feature_vector: Dict[str, Any], prediction: str, confidence: float) -> Dict[str, Any]:
-        return {
-            "threat_category": prediction,
-            "severity": self._get_severity(prediction),
-            "risk_score": self._get_risk_score(prediction),
-            "entities": self._extract_entities(feature_vector),
-            "mitre_ids": self._get_mitre_ids(prediction),
-            "suggested_playbook": self._get_playbook(prediction),
-            "confidence": confidence,
-        }
+        return [self._rule_based_predict(feature_vector) for feature_vector in feature_vectors]
 
     def _coerce_to_feature_dict(self, values: List[Any]) -> Dict[str, float]:
         if len(values) == 1 and isinstance(values[0], list):
@@ -142,8 +140,8 @@ class ThreatClassifier:
         threat_category = "unknown"
         severity = "low"
         risk_score = 0.0
-        mitre_ids = []
-        suggested_playbook = []
+        mitre_ids: List[str] = []
+        suggested_playbook: List[str] = []
 
         if feature_vector.get("login_attempt_rate", 0) > 5 or feature_vector.get("failed_login_ratio", 0) > 0.5:
             threat_category = "brute_force"
@@ -159,6 +157,13 @@ class ThreatClassifier:
             mitre_ids = ["T1071"]
             suggested_playbook = ["Inspect external connections", "Block suspicious C2 host"]
 
+        if feature_vector.get("bytes_transferred", 0) > 20_000_000:
+            threat_category = "data_exfiltration"
+            severity = "high"
+            risk_score = 88.0
+            mitre_ids = ["T1041"]
+            suggested_playbook = ["Block outbound connections", "Audit sensitive data access"]
+
         return {
             "threat_category": threat_category,
             "severity": severity,
@@ -166,36 +171,9 @@ class ThreatClassifier:
             "entities": self._extract_entities(feature_vector),
             "mitre_ids": mitre_ids,
             "suggested_playbook": suggested_playbook,
-            "confidence": 0.5 if threat_category != "unknown" else 0.2,
+            "confidence": 0.55 if threat_category != "unknown" else 0.2,
+            "model_family": "rule_fallback",
         }
-
-    def _get_severity(self, threat: str) -> str:
-        severity_map = {
-            "brute_force": "high",
-            "c2_beaconing": "high",
-            "ransomware": "critical",
-            "data_exfiltration": "high",
-            "privilege_escalation": "high",
-            "malware_infection": "high",
-            "sql_injection": "high",
-            "ddos": "high",
-            "normal_traffic": "low",
-        }
-        return severity_map.get(threat, "medium")
-
-    def _get_risk_score(self, threat: str) -> float:
-        risk_map = {
-            "brute_force": 85.0,
-            "c2_beaconing": 90.0,
-            "ransomware": 95.0,
-            "data_exfiltration": 88.0,
-            "privilege_escalation": 92.0,
-            "malware_infection": 87.0,
-            "sql_injection": 80.0,
-            "ddos": 75.0,
-            "normal_traffic": 10.0,
-        }
-        return risk_map.get(threat, 50.0)
 
     def _extract_entities(self, feature_vector: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -205,35 +183,20 @@ class ThreatClassifier:
             "destination_ip": feature_vector.get("destination_ip"),
         }
 
-    def _get_mitre_ids(self, threat: str) -> List[str]:
-        mitre_map = {
-            "brute_force": ["T1110"],
-            "c2_beaconing": ["T1071"],
-            "ransomware": ["T1486"],
-            "data_exfiltration": ["T1041"],
-            "privilege_escalation": ["T1068", "T1548"],
-            "malware_infection": ["T1189", "T1204"],
-            "sql_injection": ["T1190"],
-            "ddos": ["T1498"],
-            "lateral_movement": ["T1021"],
-            "phishing": ["T1566"],
-        }
-        return mitre_map.get(threat, [])
-
-    def _get_playbook(self, threat: str) -> List[str]:
-        playbook_map = {
-            "brute_force": ["Review failed logins", "Lock account if confirmed malicious", "Enable MFA"],
-            "c2_beaconing": ["Inspect external connections", "Block suspicious C2 host", "Isolate affected systems"],
-            "ransomware": ["Disconnect from network", "Restore from backup", "Pay ransom only as last resort"],
-            "data_exfiltration": ["Block outbound connections", "Audit data access logs", "Notify legal/compliance"],
-            "privilege_escalation": ["Review user permissions", "Implement least privilege", "Monitor for anomalous access"],
-            "malware_infection": ["Quarantine affected systems", "Run full antivirus scan", "Update signatures"],
-            "sql_injection": ["Sanitize user inputs", "Use prepared statements", "Implement WAF"],
-            "ddos": ["Enable DDoS protection", "Scale infrastructure", "Filter malicious traffic"],
-            "lateral_movement": ["Monitor network traffic", "Implement network segmentation", "Review authentication logs"],
-            "phishing": ["Train users on phishing awareness", "Implement email filtering", "Verify suspicious emails"],
-        }
-        return playbook_map.get(threat, ["Investigate alert details", "Follow incident response procedures"])
+    def _wrap_legacy_model(self, model: Any, scaler: Any, label_encoder: Any) -> XGBoostRFEnsemble:
+        if isinstance(model, RandomForestClassifier):
+            ensemble = XGBoostRFEnsemble(
+                scaler=scaler or StandardScaler(),
+                label_encoder=label_encoder or LabelEncoder(),
+                training_profile=self.training_profile,
+            )
+            ensemble.xgb_model = None
+            ensemble.rf_model = model
+            ensemble.is_trained = True
+            return ensemble
+        if isinstance(model, XGBoostRFEnsemble):
+            return model
+        return XGBoostRFEnsemble()
 
     def _as_float(self, value: Any, default: float) -> float:
         try:

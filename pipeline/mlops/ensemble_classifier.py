@@ -10,8 +10,7 @@ try:
 except ImportError:
     XGBClassifier = None
 
-
-from pipeline.anomaly_detector import FEATURE_KEYS
+from pipeline.feature_schema import FEATURE_KEYS
 
 
 class XGBoostRFEnsemble:

@@ -17,6 +17,7 @@ from pipeline.ingestion.event_ingestor import EventIngestor
 from pipeline.llm import LLMConfigurationError, LLMAssistantError, SOCAssistant
 from pipeline.mlops import get_model_manager
 from pipeline.simulation.attack_simulator import AttackSimulator, EventGenerator, ScenarioLibrary
+from pipeline.simulation.what_if_analyzer import CONTROL_LIBRARY, WhatIfAnalyzer
 from pipeline.storage import JsonlStore
 
 HOST = "127.0.0.1"
@@ -28,6 +29,7 @@ model_manager = get_model_manager()
 scenario_library = ScenarioLibrary()
 event_generator = EventGenerator()
 simulator = AttackSimulator(scenario_library, event_generator)
+what_if_analyzer = WhatIfAnalyzer(scenario_library)
 assistant = SOCAssistant()
 event_store = JsonlStore(settings.event_archive_path) if settings.persist_events else None
 alert_store = JsonlStore(settings.alert_archive_path) if settings.persist_alerts else None
@@ -337,6 +339,21 @@ class AetherSentrixAPIHandler(BaseHTTPRequestHandler):
             scenario = request_data.get("scenario", "phishing_to_exfiltration")
             report = simulator.run_simulation(scenario)
             self._send_json({"simulation": report})
+        elif self.path == "/simulate/what-if":
+            try:
+                analysis = what_if_analyzer.analyze(request_data)
+                self._send_json({"what_if": analysis})
+            except ValueError as exc:
+                self._send_json(
+                    {
+                        "error": {
+                            "message": str(exc),
+                            "type": "simulation_error",
+                            "details": {"supported_controls": sorted(CONTROL_LIBRARY)},
+                        }
+                    },
+                    status=400,
+                )
         elif self.path == "/assistant":
             try:
                 response = assistant.answer_query(
