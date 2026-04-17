@@ -3,6 +3,7 @@ import {
   BANK_TEMPLATES,
   PORTAL_ROLES,
   PORTAL_SCENARIOS,
+  PORTAL_TABS,
   DEFAULT_PORTAL_ISSUES,
   BANKTHINK_ENDPOINTS,
   BANKTHINK_GUIDES,
@@ -41,6 +42,7 @@ export function BankPortalSandbox({
         ? "ops-control"
         : "journey-qc",
   );
+  const [activePortalTab, setActivePortalTab] = useState("overview");
   const [selectedEndpointId, setSelectedEndpointId] = useState(
     BANKTHINK_ENDPOINTS[0].id,
   );
@@ -95,10 +97,6 @@ export function BankPortalSandbox({
     alertsCount,
   });
   const guide = BANKTHINK_GUIDES[role.id] || BANKTHINK_GUIDES.customer;
-  const issueCountMetric = {
-    label: "Issues in lab",
-    value: String(simulatedIssues.length).padStart(2, "0"),
-  };
 
   function handleIssueSimulation() {
     setSimulatedIssues(
@@ -116,424 +114,418 @@ export function BankPortalSandbox({
 
   return (
     <section className="portal-lab portal-theme-pesitm">
-      <div className="portal-hero">
-        <div>
-          <div className="eyebrow">Tenant Test Portal</div>
-          <div className="portal-logo-lockup">
-            <div className="portal-logo-mark">BP</div>
-            <div>
-              <span>Sunrise retail shell</span>
-              <strong>{template.name}</strong>
-              <small>{template.profile}</small>
-            </div>
-          </div>
-          <h1>BankThink-guided banking simulation for {template.name}</h1>
-          <p>
-            Explore the bank like a live portal: product dashboards, internal
-            operations, stale-access scenarios, endpoint guidance, and issue
-            triage all sit inside the same branded tenant experience.
-          </p>
-          <div className="landing-pills">
-            <span className="chip">Orange and yellow tenant theme</span>
-            <span className="chip">Endpoint-led testing</span>
-            <span className="chip">Multi-issue simulation board</span>
-            <span className="chip">
-              Customer, employee, and legacy access views
-            </span>
+      {/* ── Dashboard Header ──────────────────────────────────────────── */}
+      <div className="bp-header">
+        <div className="bp-header-left">
+          <div className="bp-logo">BP</div>
+          <div className="bp-header-info">
+            <h2>{template.name}</h2>
+            <span>{template.profile}</span>
           </div>
         </div>
-        <div className="portal-hero-actions">
+        <div className="bp-header-right">
+          <span className="bp-header-pill bp-pill-role">
+            {role.label}
+          </span>
+          <span className="bp-header-pill bp-pill-scenario">
+            {activeScenario.title}
+          </span>
+          <span
+            className={`bp-header-pill bp-pill-status ${isConnected ? "" : "offline"}`}
+          >
+            <span className="bp-status-dot" />
+            {isConnected ? backendStatus : "offline"}
+          </span>
           <button className="primary-button" onClick={onOpenConsole}>
-            Inspect Security Layer
+            SOC Console
           </button>
-          <div className="portal-runtime-card">
-            <strong>{backendStatus}</strong>
-            <span>
-              {isConnected
-                ? `${alertsCount} live risk signals`
-                : "frontend simulation ready"}
-            </span>
+        </div>
+      </div>
+
+      {/* ── Control Switchers ─────────────────────────────────────────── */}
+      <div className="bp-controls">
+        <div className="bp-control-group">
+          <span className="bp-control-label">Bank Template</span>
+          <div className="bp-control-options">
+            {BANK_TEMPLATES.map((item) => (
+              <button
+                key={item.id}
+                className={`bp-control-btn ${item.id === template.id ? "active" : ""}`}
+                onClick={() => onChangeTemplate(item.id)}
+              >
+                {item.name}
+              </button>
+            ))}
           </div>
-          <div className="portal-runtime-card portal-runtime-card-emphasis">
-            <strong>{activeScenario.title}</strong>
-            <span>{activeScenario.subtitle}</span>
+        </div>
+        <div className="bp-control-group">
+          <span className="bp-control-label">Role Surface</span>
+          <div className="bp-control-options">
+            {PORTAL_ROLES.map((item) => (
+              <button
+                key={item.id}
+                className={`bp-control-btn ${item.id === role.id ? "active" : ""}`}
+                onClick={() => onChangeRole(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bp-control-group">
+          <span className="bp-control-label">Scenario Lens</span>
+          <div className="bp-control-options">
+            {PORTAL_SCENARIOS.map((item) => (
+              <button
+                key={item.id}
+                className={`bp-control-btn ${item.id === activeScenario.id ? "active" : ""}`}
+                onClick={() => setActiveScenarioId(item.id)}
+              >
+                {item.title}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <section className="portal-control-grid">
-        <div className="panel">
-          <div className="panel-header">
-            <div className="panel-title">Choose Bank Template</div>
-          </div>
-          <div className="switch-grid">
-            {BANK_TEMPLATES.map((item) => (
-              <button
-                key={item.id}
-                className={
-                  item.id === template.id ? "switch-card active" : "switch-card"
-                }
-                onClick={() => onChangeTemplate(item.id)}
-              >
-                <strong>{item.name}</strong>
-                <span>{item.profile}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-header">
-            <div className="panel-title">Choose Role Surface</div>
-          </div>
-          <div className="switch-grid compact">
-            {PORTAL_ROLES.map((item) => (
-              <button
-                key={item.id}
-                className={
-                  item.id === role.id ? "switch-card active" : "switch-card"
-                }
-                onClick={() => onChangeRole(item.id)}
-              >
-                <strong>{item.label}</strong>
-                <span>{item.subtitle}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-header">
-            <div className="panel-title">Scenario Lens</div>
-          </div>
-          <div className="switch-grid compact">
-            {PORTAL_SCENARIOS.map((item) => (
-              <button
-                key={item.id}
-                className={
-                  item.id === activeScenario.id
-                    ? "switch-card active"
-                    : "switch-card"
-                }
-                onClick={() => setActiveScenarioId(item.id)}
-              >
-                <strong>{item.title}</strong>
-                <span>{item.subtitle}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-header">
-            <div className="panel-title">Tenant Summary</div>
-          </div>
-          <p className="panel-subtitle">{template.summary}</p>
-          <div className="mini-row wrap">
-            {template.integrations.map((item) => (
-              <span key={item} className="chip">
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="portal-app-shell">
-        <aside className="portal-sidebar">
-          <div className="portal-brand-card">
-            <span>Bank of Pesitm shell</span>
-            <strong>{role.label}</strong>
-            <small>{role.subtitle}</small>
-            <div className="portal-brand-tags">
-              <span className="chip">Live look and feel</span>
-              <span className="chip">{activeScenario.title}</span>
+      {/* ── 3-Column Dashboard ────────────────────────────────────────── */}
+      <div className="bp-dashboard">
+        {/* ── Sidebar ──────────────────────────────────────────────────── */}
+        <aside className="bp-sidebar">
+          <div className="bp-sidebar-card">
+            <span className="bp-sidebar-card-title">Modules</span>
+            <div className="bp-module-list">
+              {modules.map((item) => (
+                <button
+                  key={item.id}
+                  className={`bp-module-btn ${item.id === activeModule.id ? "active" : ""}`}
+                  onClick={() => setActiveModuleId(item.id)}
+                >
+                  <strong>{item.label}</strong>
+                  <span>{item.caption}</span>
+                </button>
+              ))}
             </div>
           </div>
-          <div className="portal-nav-list">
-            {modules.map((item) => (
-              <button
-                key={item.id}
-                className={
-                  item.id === activeModule.id
-                    ? "portal-nav-item active"
-                    : "portal-nav-item"
-                }
-                onClick={() => setActiveModuleId(item.id)}
-              >
-                <strong>{item.label}</strong>
-                <span>{item.caption}</span>
-              </button>
-            ))}
-          </div>
-          <article className="portal-card">
-            <div className="panel-title">Portal Coverage</div>
-            <div className="journey-note">
-              <div className="journey-row">
-                {template.modules.length} banking modules staged
-              </div>
-              <div className="journey-row">
-                {BANKTHINK_ENDPOINTS.length} backend endpoints explained
-              </div>
-              <div className="journey-row">
-                {simulatedIssues.length} issues ready for triage
-              </div>
-            </div>
-          </article>
-        </aside>
 
-        <div className="portal-main">
-          <div className="portal-metric-grid">
-            {[...role.metrics, issueCountMetric].map((metric) => (
-              <div key={metric.label} className="portal-stat-card">
+          <div className="bp-sidebar-card">
+            <span className="bp-sidebar-card-title">Role Metrics</span>
+            {role.metrics.map((metric) => (
+              <div key={metric.label} className="bp-stat-mini">
                 <span>{metric.label}</span>
                 <strong>{metric.value}</strong>
               </div>
             ))}
+            <div className="bp-stat-mini">
+              <span>Issues in lab</span>
+              <strong>{String(simulatedIssues.length).padStart(2, "0")}</strong>
+            </div>
           </div>
 
-          <article className="portal-card portal-card-wide portal-page-header">
-            <div>
-              <div className="panel-title">{activeModule.label}</div>
-              <p className="panel-subtitle">{workspace.summary}</p>
+          <div className="bp-sidebar-card">
+            <span className="bp-sidebar-card-title">Quick Actions</span>
+            <div className="bp-quick-actions">
+              {role.actions.map((action) => (
+                <button key={action} className="bp-action-btn">
+                  {action}
+                </button>
+              ))}
             </div>
-            <div className="mini-row wrap">
-              <span className="chip">{activeScenario.title}</span>
-              <span className="chip">{selectedEndpoint.method}</span>
-              <span className="chip">{selectedEndpoint.path}</span>
-            </div>
-          </article>
+          </div>
+        </aside>
 
-          <div className="portal-focus-grid">
-            {workspace.highlights.map((item) => (
-              <article key={item.title} className="portal-focus-card">
-                <span>{item.kicker}</span>
-                <strong>{item.title}</strong>
-                <p>{item.detail}</p>
-              </article>
+        {/* ── Main Workspace ───────────────────────────────────────────── */}
+        <div className="bp-main">
+          {/* Tab Bar */}
+          <div className="bp-tab-bar">
+            {PORTAL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`bp-tab ${tab.id === activePortalTab ? "active" : ""}`}
+                onClick={() => setActivePortalTab(tab.id)}
+              >
+                <span className="bp-tab-icon">{tab.icon}</span>
+                {tab.label}
+              </button>
             ))}
           </div>
 
-          <div className="portal-card-grid">
-            <article className="portal-card">
-              <div className="panel-title">Quick Actions</div>
-              <div className="mini-row wrap">
-                {role.actions.map((action) => (
-                  <button key={action} className="ghost-button small-button">
-                    {action}
-                  </button>
-                ))}
+          {/* ── Tab: Overview ───────────────────────────────────────── */}
+          {activePortalTab === "overview" && (
+            <>
+              {/* Metrics */}
+              <div className="bp-metrics-row">
+                {[...role.metrics, { label: "Issues", value: String(simulatedIssues.length).padStart(2, "0") }].map(
+                  (metric) => (
+                    <div key={metric.label} className="bp-metric-card">
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                    </div>
+                  ),
+                )}
               </div>
-              <div className="journey-note">
-                {workspace.quickNotes.map((item) => (
-                  <div key={item} className="journey-row">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </article>
 
-            <article className="portal-card">
-              <div className="panel-title">Workflow Preview</div>
-              <div className="journey-note">
-                {role.workflows.map((item) => (
-                  <div key={item} className="journey-row">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="portal-card">
-              <div className="panel-title">Feature Surfaces</div>
-              <div className="portal-product-grid">
-                {workspace.features.map((item) => (
-                  <div key={item.title} className="portal-product-card">
-                    <span>{item.kicker}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="portal-card">
-              <div className="panel-title">BankThink Test Trail</div>
-              <div className="journey-note">
-                {workspace.checkpoints.map((item) => (
-                  <div key={item} className="journey-row">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="portal-card portal-card-wide">
-              <div className="panel-title">Session and Activity Feed</div>
-              <div className="portal-activity-list">
-                {activity.map((item) => (
-                  <div key={item.title} className="portal-activity-row">
-                    <div>
+              {/* Active Module */}
+              <div className="bp-card">
+                <span className="bp-card-title">{activeModule.label}</span>
+                <p className="bp-card-summary">{workspace.summary}</p>
+                <div className="bp-features-grid">
+                  {workspace.features.map((item) => (
+                    <div key={item.title} className="bp-feature-tile">
+                      <span>{item.kicker}</span>
                       <strong>{item.title}</strong>
                       <p>{item.detail}</p>
                     </div>
-                    <span className="chip">{item.status}</span>
-                  </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Highlights */}
+              <div className="bp-card">
+                <span className="bp-card-title">Workspace Highlights</span>
+                <div className="bp-features-grid">
+                  {workspace.highlights.map((item) => (
+                    <div key={item.title} className="bp-feature-tile">
+                      <span>{item.kicker}</span>
+                      <strong>{item.title}</strong>
+                      <p>{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Activity Feed */}
+              <div className="bp-card">
+                <span className="bp-card-title">Session Activity</span>
+                <div className="bp-feed">
+                  {activity.map((item) => (
+                    <div key={item.title} className="bp-feed-item">
+                      <div
+                        className={`bp-feed-dot status-${item.status.toLowerCase().replace(/\s/g, "-")}`}
+                      />
+                      <div className="bp-feed-body">
+                        <strong>{item.title}</strong>
+                        <p>{item.detail}</p>
+                      </div>
+                      <span className="bp-feed-status">{item.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Workflow + Checkpoints */}
+              <div className="bp-card">
+                <span className="bp-card-title">Workflow Preview</span>
+                <div className="bp-notes-list">
+                  {role.workflows.map((item) => (
+                    <div key={item} className="bp-note-item">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bp-card">
+                <span className="bp-card-title">BankThink Test Trail</span>
+                <div className="bp-notes-list">
+                  {workspace.checkpoints.map((item) => (
+                    <div key={item} className="bp-note-item">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Tab: Endpoints ──────────────────────────────────────── */}
+          {activePortalTab === "endpoints" && (
+            <>
+              <div className="bp-endpoint-grid">
+                {BANKTHINK_ENDPOINTS.map((item) => (
+                  <button
+                    key={item.id}
+                    className={`bp-endpoint-btn ${item.id === selectedEndpoint.id ? "active" : ""}`}
+                    onClick={() => setSelectedEndpointId(item.id)}
+                  >
+                    <span
+                      className={`bp-endpoint-method ${item.method.toLowerCase()}`}
+                    >
+                      {item.method}
+                    </span>
+                    <strong>{item.path}</strong>
+                    <small>{item.owner} — {item.purpose}</small>
+                  </button>
                 ))}
               </div>
-            </article>
-          </div>
+
+              <div className="bp-endpoint-detail">
+                <div className="bp-endpoint-detail-method">
+                  <span
+                    className={`bp-endpoint-method ${selectedEndpoint.method.toLowerCase()}`}
+                  >
+                    {selectedEndpoint.method}
+                  </span>
+                  {selectedEndpoint.path}
+                </div>
+                <h4>{selectedEndpoint.owner}: {selectedEndpoint.purpose}</h4>
+                <p>{selectedEndpoint.purpose}</p>
+                <div className="bp-notes-list">
+                  <div className="bp-note-item">
+                    <strong style={{ color: "var(--portal-copy)" }}>Test: </strong>
+                    {selectedEndpoint.test}
+                  </div>
+                  <div className="bp-note-item">
+                    <strong style={{ color: "var(--portal-copy)" }}>Risk: </strong>
+                    {selectedEndpoint.risk}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Tab: Issue Lab ──────────────────────────────────────── */}
+          {activePortalTab === "issues" && (
+            <div className="bp-issue-layout">
+              <div className="bp-card">
+                <span className="bp-card-title">Issue Intake</span>
+                <p className="bp-card-summary">
+                  Paste one issue per line to simulate broken journeys, workflow
+                  drift, fraud cases, or stale-access problems.
+                </p>
+                <textarea
+                  className="bp-issue-textarea"
+                  value={issueDraft}
+                  onChange={(event) => setIssueDraft(event.target.value)}
+                  placeholder="One issue per line"
+                  rows={8}
+                />
+                <div className="bp-issue-actions">
+                  <button
+                    className="primary-button"
+                    onClick={handleIssueSimulation}
+                  >
+                    Simulate
+                  </button>
+                  <button
+                    className="ghost-button"
+                    onClick={resetIssueSimulation}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              <div className="bp-card">
+                <span className="bp-card-title">
+                  Triage Board ({simulatedIssues.length})
+                </span>
+                <div className="bp-issue-list">
+                  {simulatedIssues.map((item) => (
+                    <div key={item.id} className="bp-issue-card">
+                      <div className="bp-issue-card-head">
+                        <strong>{item.title}</strong>
+                        <span className={`bp-severity ${item.severity}`}>
+                          {item.severity}
+                        </span>
+                      </div>
+                      <p>{item.summary}</p>
+                      <div className="bp-issue-tags">
+                        <span className="bp-issue-tag">{item.owner}</span>
+                        <span className="bp-issue-tag">{item.surface}</span>
+                        <span className="bp-issue-tag">{item.status}</span>
+                        <span className="bp-issue-tag">{item.endpoint}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <aside className="portal-sidepanel">
-          <article className="portal-card portal-bankthink-card">
-            <div className="panel-title">BankThink Guide</div>
-            <p className="panel-subtitle">{activeScenario.summary}</p>
-            <div className="journey-note">
-              {guide.map((item) => (
-                <div key={item} className="journey-row">
-                  {item}
-                </div>
-              ))}
+        {/* ── Security Panel (right sidebar) ───────────────────────────── */}
+        <aside className="bp-security">
+          <div className="bp-security-card">
+            <div className="bp-security-card-title">
+              <span className="bp-sec-icon">🛡️</span>
+              AetherSentrix Monitoring
             </div>
-          </article>
-          <article className="portal-card">
-            <div className="panel-title">Endpoint Navigator</div>
-            <label className="field">
-              <span>BankThink endpoint focus</span>
-              <select
-                value={selectedEndpoint.id}
-                onChange={(event) => setSelectedEndpointId(event.target.value)}
-              >
-                {BANKTHINK_ENDPOINTS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.method} {item.path}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="portal-endpoint-detail">
-              <span>{selectedEndpoint.owner}</span>
-              <strong>
-                {selectedEndpoint.method} {selectedEndpoint.path}
+            <div className="bp-threat-indicator">
+              <span className="bp-threat-score">
+                {role.id === "legacy" ? "34%" : role.id === "employee" ? "82%" : "91%"}
+              </span>
+              <p>
+                {role.id === "legacy"
+                  ? "Low trust — privilege drift detected"
+                  : role.id === "employee"
+                    ? "Moderate trust — internal ops"
+                    : "High trust — standard session"}
+              </p>
+            </div>
+            <div className="bp-threat-indicator">
+              <span className="bp-threat-score">{alertsCount || 0}</span>
+              <p>Live risk signals across all layers</p>
+            </div>
+          </div>
+
+          <div className="bp-security-card">
+            <div className="bp-security-card-title">
+              <span className="bp-sec-icon">📡</span>
+              System Status
+            </div>
+            <div className="bp-security-stat">
+              <span>Backend</span>
+              <strong className={isConnected ? "status-ok" : "status-danger"}>
+                {backendStatus}
               </strong>
-              <p>{selectedEndpoint.purpose}</p>
-              <div className="journey-note">
-                <div className="journey-row">
-                  Test flow: {selectedEndpoint.test}
-                </div>
-                <div className="journey-row">
-                  Watch for: {selectedEndpoint.risk}
-                </div>
-              </div>
             </div>
-          </article>
-          <article className="portal-card">
-            <div className="panel-title">Security Overlay</div>
-            <div className="journey-note">
-              <div className="journey-row">Backend: {backendStatus}</div>
-              <div className="journey-row">
-                Assistant: {assistantConfigured ? "configured" : "optional"}
-              </div>
-              <div className="journey-row">Legacy scenario support: enabled</div>
-              <div className="journey-row">
-                Simulation lens: {activeScenario.title}
-              </div>
+            <div className="bp-security-stat">
+              <span>Assistant</span>
+              <strong className={assistantConfigured ? "status-ok" : "status-warn"}>
+                {assistantConfigured ? "configured" : "optional"}
+              </strong>
             </div>
-          </article>
-          <article className="portal-card">
-            <div className="panel-title">Compatibility Notes</div>
-            <div className="mini-row wrap">
+            <div className="bp-security-stat">
+              <span>Scenario</span>
+              <strong>{activeScenario.title}</strong>
+            </div>
+            <div className="bp-security-stat">
+              <span>Legacy control</span>
+              <strong className="status-ok">enabled</strong>
+            </div>
+          </div>
+
+          <div className="bp-security-card">
+            <div className="bp-security-card-title">
+              <span className="bp-sec-icon">🧠</span>
+              BankThink Guide
+            </div>
+            <p style={{ margin: "0 0 10px", fontSize: "0.8rem", color: "var(--portal-muted)" }}>
+              {activeScenario.summary}
+            </p>
+            {guide.map((item) => (
+              <div key={item} className="bp-guide-item">
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <div className="bp-security-card">
+            <div className="bp-security-card-title">
+              <span className="bp-sec-icon">🏷️</span>
+              Tenant Modules
+            </div>
+            <div className="bp-quick-actions">
               {template.modules.map((item) => (
-                <span key={item} className="chip">
+                <span key={item} className="bp-issue-tag">
                   {item}
                 </span>
               ))}
             </div>
-            <p className="panel-subtitle">
-              Swap tenant branding, modules, and integration adapters while
-              keeping the same portal shell.
-            </p>
-          </article>
+          </div>
         </aside>
-      </section>
-
-      <section className="portal-simulation-grid">
-        <article className="portal-card">
-          <div className="panel-header">
-            <div className="panel-title">Issue Intake Lab</div>
-          </div>
-          <p className="panel-subtitle">
-            Paste one issue per line to simulate broken journeys, workflow
-            drift, fraud cases, or stale-access problems across the bank portal.
-          </p>
-          <label className="field">
-            <span>Issue list</span>
-            <textarea
-              className="issue-textarea"
-              value={issueDraft}
-              onChange={(event) => setIssueDraft(event.target.value)}
-              placeholder="One issue per line"
-              rows={8}
-            />
-          </label>
-          <div className="button-row wrap">
-            <button className="primary-button" onClick={handleIssueSimulation}>
-              Simulate Issues
-            </button>
-            <button className="ghost-button" onClick={resetIssueSimulation}>
-              Reset Sample Batch
-            </button>
-          </div>
-        </article>
-
-        <article className="portal-card">
-          <div className="panel-header">
-            <div className="panel-title">Simulation Triage Board</div>
-          </div>
-          <div className="portal-issue-list">
-            {simulatedIssues.map((item) => (
-              <div key={item.id} className="portal-issue-card">
-                <div className="alert-card-top">
-                  <strong>{item.title}</strong>
-                  <span className={`severity-pill ${item.severity}`}>
-                    {item.severity}
-                  </span>
-                </div>
-                <p>{item.summary}</p>
-                <div className="mini-row wrap">
-                  <span className="chip">{item.owner}</span>
-                  <span className="chip">{item.surface}</span>
-                  <span className="chip">{item.status}</span>
-                </div>
-                <div className="journey-note">
-                  <div className="journey-row">
-                    Suggested endpoint: {item.endpoint}
-                  </div>
-                  <div className="journey-row">Next step: {item.nextAction}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="portal-endpoint-grid">
-        {BANKTHINK_ENDPOINTS.map((item) => (
-          <button
-            key={item.id}
-            className={
-              item.id === selectedEndpoint.id
-                ? "portal-endpoint-card active"
-                : "portal-endpoint-card"
-            }
-            onClick={() => setSelectedEndpointId(item.id)}
-          >
-            <span>
-              {item.method} {item.path}
-            </span>
-            <strong>{item.owner}</strong>
-            <small>{item.purpose}</small>
-          </button>
-        ))}
-      </section>
+      </div>
     </section>
   );
 }

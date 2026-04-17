@@ -612,3 +612,9 @@ export const LEGACY_SCENARIO_STEPS = [
     status: "critical",
   },
 ];
+
+export const PORTAL_TABS = [
+  { id: "overview", label: "Overview", icon: "📊" },
+  { id: "endpoints", label: "Endpoints", icon: "🔌" },
+  { id: "issues", label: "Issue Lab", icon: "🧪" },
+];
