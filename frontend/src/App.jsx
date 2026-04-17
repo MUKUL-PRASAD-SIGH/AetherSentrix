@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import LandingPage from "./LandingPage";
+import "./landing.css";
 
 const DEFAULT_API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080";
@@ -497,6 +499,7 @@ export default function App() {
   const [selectedTemplateId, setSelectedTemplateId] = useState("pesitm");
   const [selectedPortalRole, setSelectedPortalRole] = useState("customer");
   const [consoleOpen, setConsoleOpen] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [backendHealth, setBackendHealth] = useState(null);
   const [assistantHealth, setAssistantHealth] = useState(null);
   const [ingestionHealth, setIngestionHealth] = useState(null);
@@ -1705,6 +1708,8 @@ export default function App() {
         ) : null}
           </>
         ) : null}
+          </>
+        )}
       </main>
     </div>
   );
