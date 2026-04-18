@@ -48,6 +48,7 @@ import { TrendChart } from "./components/visuals/TrendChart";
 import { Heatmap } from "./components/visuals/Heatmap";
 import { AttackGraph } from "./components/visuals/AttackGraph";
 import { SeverityBars } from "./components/visuals/SeverityBars";
+import { HybridPipeline } from "./components/visuals/HybridPipeline/HybridPipeline";
 
 // Section Components
 import { CompatibilityPanel } from "./components/sections/CompatibilityPanel";
@@ -767,6 +768,20 @@ export default function App() {
             </nav>
             {activeTab === "overview" ? (
               <section className="content-grid">
+                
+                {/* NEW HYBRID PIPELINE DIAGRAM */}
+                <div className="panel panel-span-two">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Real-Time Core Pipeline</div>
+                      <div className="panel-subtitle">
+                        Visually tracing the live inference through the SNN + LNN ensemble.
+                      </div>
+                    </div>
+                  </div>
+                  <HybridPipeline alerts={allAlerts} />
+                </div>
+
                 <div className="panel panel-span-two">
                   <div className="panel-header">
                     <div>
