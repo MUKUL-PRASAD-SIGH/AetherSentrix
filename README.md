@@ -66,6 +66,8 @@ Build an AI-driven threat detection and simulation engine that analyzes signals 
 ## Current Implementation Status
 
 Implemented in the codebase:
+- **Modularized Surfaces**: Platform, Bank Portal, and Security Console now fully decoupled components.
+- **MLOps Suite**: Dedicated `evaluate_models.py` for pipeline transparency.
 - Detection APIs, simulation APIs, and `/simulate/what-if`
 - Trainable SNN/LNN-style neuromorphic models in the live detection pipeline
 - Synthetic and real-dataset model training with registry-backed activation
@@ -82,6 +84,16 @@ See [docs/INTEGRATION_IMPLEMENTATION_GUIDE.md](docs/INTEGRATION_IMPLEMENTATION_G
 
 ---
 
+
+## 🏢 **Modular Frontend Architecture**
+
+The frontend is built for extreme maintainability, split into three clear product surfaces:
+
+1. **🌐 Platform Landing** (`LandingPage.jsx`): The entry point for stakeholders and the public mission statement.
+2. **🏦 Bank Portal Sandbox** (`BankPortalSandbox.jsx`): A high-fidelity banking environment used to generate "BankThink" telemetry for testing.
+3. **🛡️ Security Console** (`SecurityConsole.jsx`): The standalone SOC workstation where analysts triage alerts, asks the AI Assistant, and manages MLOps.
+
+**Location**: `frontend/src/components/sections/`
 ## 🏗️ **Technical Architecture**
 
 ### **Multi-Layer Signal Processing**
@@ -176,6 +188,23 @@ See [docs/INTEGRATION_IMPLEMENTATION_GUIDE.md](docs/INTEGRATION_IMPLEMENTATION_G
 
 ---
 
+
+## 🧪 **Model Evaluation & Diagnostics**
+
+AetherSentrix includes a dedicated MLOps diagnostic suite to judge model performance and trace inference logic.
+
+### **Diagnostic Script: `scripts/evaluate_models.py`**
+Run the evaluation script to generate 1,500+ synthetic events across various attack vectors and see how the SNN/LNN ensemble performs in real-time.
+
+```bash
+# Run the full evaluation suite
+python3 scripts/evaluate_models.py
+```
+
+**What it does:**
+- **Full Traceability**: Includes an "X-Ray Trace" that exposes the internal mathematical transformations from raw telemetry to final threat classification.
+- **Metric Deck**: Calculates Precision, Recall, F1-Score, and Accuracy for both the Spiking Neural Network (SNN) and Liquid Neural Network (LNN).
+- **Simulation**: Injects adversarial noise to test the robustness of the neuromorphic cores.
 ## 🤖 **AI Innovation Showcase**
 
 ### **Spiking Neural Networks (SNNs)**

@@ -2099,3 +2099,68 @@ td {
     align-items: flex-start;
   }
 }
+
+/* =====================================================
+   SURFACE SWITCHER (TOP NAV)
+   ===================================================== */
+.surface-switcher {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 40px;
+  padding: 0 4px;
+  position: relative;
+  z-index: 100;
+}
+
+.surface-switcher h2 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.surface-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.surface-button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 20px;
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+}
+
+.surface-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+.surface-button.active {
+  background: linear-gradient(135deg, rgba(77, 214, 255, 0.25), rgba(77, 214, 255, 0.08));
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.25),
+    0 0 15px rgba(77, 214, 255, 0.15);
+}
+
+/* Ensure main containers have clear spacing */
+.landing-hero,
+.portal-hero,
+.hero-panel {
+  margin-top: 0 !important;
+}
+
+.app-container {
+  padding-top: 32px !important;
+}
