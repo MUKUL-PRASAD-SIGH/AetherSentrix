@@ -53,20 +53,19 @@ def run_trace_showcase(engine: DetectionEngine, normalizer: EventNormalizer, ext
     for key, val in vital_metrics.items():
         print(f"   - {key}: {val}")
 
-    # 4. Processing in Neuromorphic Models
-    print("\nSTEP 4: Evaluating against Spiking Neural Net (SNN) for Spatial Burst Mapping.")
-    print("   -> SNN receives multi-dimensional array.")
+    # 4. Processing in Isolation Forest
+    print("\nSTEP 4: Evaluating against Isolation Forest for Anomaly Detection.")
+    print("   -> Forest receives normalized mathematical vector.")
     
     anomaly_score = engine.anomaly_detector.score_batch([extracted])[0]
     is_anomaly = anomaly_score > 0.5
-    print(f"   -> [SNN Anomaly Score]: {anomaly_score:.3f} (Threshold 0.5) -> {'SPIKE DETECTED' if is_anomaly else 'BASELINE'}")
+    print(f"   -> [Isolation Forest Anomaly Score]: {anomaly_score:.3f} (Threshold 0.5) -> {'ISOLATION DETECTED' if is_anomaly else 'BASELINE'}")
     
-    print("\nSTEP 5: Evaluating against Liquid Neural Net (LNN) for Temporal Drift & Classification.")
+    print("\nSTEP 5: Evaluating against XGBoost+RF Ensemble for Classification.")
     classification = engine.classifier.predict_batch([extracted])[0]
-    # The new neuromorphic classifier returns a dict
     expected_threat = classification.get('threat_category', 'unknown') if isinstance(classification, dict) else classification
     risk = classification.get('risk_score', 0.0) if isinstance(classification, dict) else 0.0
-    print(f"   -> [LNN Temporal Output]: Threat Context = {expected_threat.upper()}, Calculated Risk = {risk:.3f}")
+    print(f"   -> [Ensemble Voting Output]: Threat Context = {expected_threat.upper()}, Calculated Risk = {risk:.3f}")
     
     print("\nSTEP 6: Confidence Fusion & Explainability Layer")
     detect_res = engine.detect_events([normalized])
@@ -76,7 +75,6 @@ def run_trace_showcase(engine: DetectionEngine, normalizer: EventNormalizer, ext
     print(f"      {detect_res['explanation']['text']}")
 
     return
-    
 def generate_and_evaluate_synthetic_dataset():
     """Generates 1500 mock events, runs them through the ML pipeline, and calculates full stats"""
     print_section("⚙️ MOCK DATASET GENERATION")
@@ -114,9 +112,6 @@ def generate_and_evaluate_synthetic_dataset():
     for event in all_events:
         norm = normalizer.normalize_event(event)
         feat = extractor.extract_features(norm)
-        
-        # Raw model array extraction
-        
         # 1. Anomaly Detector processing stats
         anomaly_score = engine.anomaly_detector.score_batch([feat])[0]
         y_pred_anomaly_scores.append(anomaly_score)
@@ -142,18 +137,18 @@ def generate_and_evaluate_synthetic_dataset():
     # Use our internal ModelEvaluator
     evaluator = ModelEvaluator()
     
-    # 1. Spiking Neural Net Output (Anomaly Extractor)
-    print("MODEL 1: Spiking Neural Net (Anomaly Detector)")
+    # 1. Isolation Forest Output (Anomaly Extractor)
+    print("MODEL 1: Isolation Forest (Anomaly Detector)")
     anom_metrics = evaluator.evaluate_anomaly_detector(y_true_arr, y_pred_anom_arr, scores=y_scores_arr)
     print(f"  - Accuracy : {anom_metrics['accuracy'] * 100:.2f}%")
-    print(f"  - Precision: {anom_metrics['precision'] * 100:.2f}%  (When it says 'spike', it is actually a spike)")
+    print(f"  - Precision: {anom_metrics['precision'] * 100:.2f}%  (When it isolates behavior, it is an actual anomaly)")
     print(f"  - Recall   : {anom_metrics['recall'] * 100:.2f}%  (Did it catch the anomalies or let them slip?)")
     print(f"  - F1-Score : {anom_metrics['f1'] * 100:.2f}%")
     if 'roc_auc' in anom_metrics:
          print(f"  - ROC-AUC  : {anom_metrics['roc_auc'] * 100:.2f}%")
 
-    # 2. Liquid Neural Net Output (Threat Classifier)
-    print("\nMODEL 2: Liquid Neural Net (Context/Threat Classifier)")
+    # 2. XGBoost + RF Ensemble Output (Threat Classifier)
+    print("\nMODEL 2: XGBoost + Random Forest Ensemble (Context/Threat Classifier)")
     class_metrics = evaluator.evaluate_classifier(y_true_arr, y_pred_class_arr)
     print(f"  - Accuracy : {class_metrics['accuracy'] * 100:.2f}%")
     print(f"  - Precision: {class_metrics['precision'] * 100:.2f}%")

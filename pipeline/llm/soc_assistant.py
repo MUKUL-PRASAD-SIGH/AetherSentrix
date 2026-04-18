@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-
+from openai import OpenAI, APIError
 
 class LLMConfigurationError(RuntimeError):
     pass
@@ -37,10 +35,13 @@ class SOCAssistant:
         endpoint: Optional[str] = None,
     ):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-        self.endpoint = endpoint or os.getenv("OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
+        self.model = model or os.getenv("OPENAI_MODEL", "llama3-8b-8192")
+        self.endpoint = endpoint or os.getenv("OPENAI_RESPONSES_URL", "https://api.groq.com/openai/v1")
         self.last_error: Optional[Dict[str, Any]] = None
         self.last_success_at: Optional[str] = None
+        self.client = None
+        if self.api_key:
+            self.client = OpenAI(api_key=self.api_key, base_url=self.endpoint)
 
     def is_configured(self) -> bool:
         return bool(self.api_key)
@@ -66,20 +67,32 @@ class SOCAssistant:
             raise LLMConfigurationError("OPENAI_API_KEY is not configured.")
 
         prompt = self._build_prompt(query=query, alert=alert, alerts=alerts, system_context=system_context)
-        payload = {
-            "model": self.model,
-            "input": prompt,
-            "max_output_tokens": 500,
-        }
-
-        response = self._post_json(payload)
-        self.last_error = None
-        self.last_success_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        return {
-            "model": self.model,
-            "answer": self._extract_output_text(response),
-            "raw_response_id": response.get("id"),
-        }
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an enterprise SOC assistant for AetherSentrix. Answer as a security analyst assistant. Be concise, factual, and action-oriented."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+            )
+            self.last_error = None
+            self.last_success_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            return {
+                "model": self.model,
+                "answer": response.choices[0].message.content,
+                "raw_response_id": response.id,
+            }
+        except APIError as exc:
+            translated = LLMAssistantError(
+                message="The assistant request failed upstream.",
+                error_type="api_error",
+                status_code=exc.status_code,
+                details={"upstream_message": str(exc)}
+            )
+            self.last_error = translated.to_dict()
+            raise translated from exc
 
     def _build_prompt(
         self,

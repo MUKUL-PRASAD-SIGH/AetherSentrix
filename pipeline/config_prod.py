@@ -60,7 +60,7 @@ API_CONFIG: Dict[str, Any] = {
     'version': '2.0.0',
     'description': 'Production-grade API for AI threat detection',
     'host': os.getenv('API_HOST', 'localhost'),
-    'port': int(os.getenv('API_PORT', '8000')),
+    'port': int(os.getenv('API_PORT', '8080')),
     'enable_https': os.getenv('ENABLE_HTTPS', 'false').lower() == 'true',
     'ssl_cert_path': os.getenv('SSL_CERT_PATH', '/etc/ssl/certs/cert.pem'),
     'ssl_key_path': os.getenv('SSL_KEY_PATH', '/etc/ssl/private/key.pem')
@@ -72,7 +72,7 @@ SECURITY_CONFIG: Dict[str, Any] = {
     'jwt_algorithm': 'HS256',
     'token_expiry_seconds': 3600,
     'encryption_key_path': os.getenv('ENCRYPTION_KEY_PATH', '.encryption_key'),
-    'cors_origins': ['http://localhost:3000', 'http://localhost:5173'],
+    'cors_origins': ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
     'enable_cors': True
 }
 

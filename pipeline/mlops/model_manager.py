@@ -136,11 +136,11 @@ class ModelManager:
             classifier_metrics = active_run.get("metrics", {}).get("classifier", {})
             macro_f1 = classifier_metrics.get("macro_f1")
             if isinstance(macro_f1, (float, int)) and macro_f1 < 0.8:
-                recommendations.append("Macro F1 is below 0.80. Improve label quality, class balance, or threat-specific features.")
+                recommendations.append("The Threat Classifier's confidence is running below 80%. Analysts should treat categorized alerts as 'suspected' rather than 'confirmed' and actively escalate high-risk network traffic for manual investigation.")
             anomaly_metrics = active_run.get("metrics", {}).get("anomaly", {})
             recall = anomaly_metrics.get("recall")
             if isinstance(recall, (float, int)) and recall < 0.75:
-                recommendations.append("Anomaly recall is low. Increase contamination sensitivity or enrich deviation features.")
+                recommendations.append("The Anomaly Detector is currently under-reporting. Analysts are advised to proactively hunt for stealthy threats in the raw activity logs and strictly verify trusted internal baselines to avoid missing subtle breaches.")
         return recommendations
 
 

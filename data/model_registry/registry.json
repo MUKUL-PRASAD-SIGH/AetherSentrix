@@ -1,8 +1,8 @@
 {
   "active_mode": "real",
-  "active_version": "v20260414T151029Z",
-  "latest_real_version": "v20260414T151029Z",
-  "latest_synthetic_version": "v20260414T143615Z",
+  "active_version": "v20260418T055524Z",
+  "latest_real_version": "v20260418T055524Z",
+  "latest_synthetic_version": "v20260418T044007Z",
   "versions": [
     {
       "version": "v20260414T142508Z",
@@ -36,8 +36,8 @@
         "rows_trained": 4992
       },
       "artifacts": {
-        "classifier": "data\\model_registry\\versions\\v20260414T142508Z\\classifier.pkl",
-        "anomaly": "data\\model_registry\\versions\\v20260414T142508Z\\anomaly.pkl"
+        "classifier": "data/model_registry/versions/v20260414T142508Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260414T142508Z/anomaly.pkl"
       }
     },
     {
@@ -72,8 +72,8 @@
         "rows_trained": 4992
       },
       "artifacts": {
-        "classifier": "data\\model_registry\\versions\\v20260414T142728Z\\classifier.pkl",
-        "anomaly": "data\\model_registry\\versions\\v20260414T142728Z\\anomaly.pkl"
+        "classifier": "data/model_registry/versions/v20260414T142728Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260414T142728Z/anomaly.pkl"
       }
     },
     {
@@ -108,8 +108,8 @@
         "rows_trained": 4992
       },
       "artifacts": {
-        "classifier": "data\\model_registry\\versions\\v20260414T143615Z\\classifier.pkl",
-        "anomaly": "data\\model_registry\\versions\\v20260414T143615Z\\anomaly.pkl"
+        "classifier": "data/model_registry/versions/v20260414T143615Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260414T143615Z/anomaly.pkl"
       }
     },
     {
@@ -148,8 +148,94 @@
         }
       },
       "artifacts": {
-        "classifier": "data\\model_registry\\versions\\v20260414T151029Z\\classifier.pkl",
-        "anomaly": "data\\model_registry\\versions\\v20260414T151029Z\\anomaly.pkl"
+        "classifier": "data/model_registry/versions/v20260414T151029Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260414T151029Z/anomaly.pkl"
+      }
+    },
+    {
+      "version": "v20260418T044007Z",
+      "trained_at": "2026-04-18T04:40:08.041644Z",
+      "source_mode": "synthetic",
+      "dataset_name": "synthetic_baseline",
+      "dataset_family": "Synthetic",
+      "metrics": {
+        "classifier": {
+          "accuracy": 0.6569,
+          "macro_f1": 0.6525,
+          "weighted_f1": 0.6525
+        },
+        "anomaly": {
+          "precision": 0.8588,
+          "recall": 0.5475,
+          "f1": 0.6687,
+          "contamination": 0.2,
+          "threshold": 0.5
+        },
+        "feature_keys": [
+          "login_attempt_rate",
+          "failed_login_ratio",
+          "session_duration",
+          "bytes_transferred",
+          "unique_ips",
+          "endpoint_anomaly_score",
+          "behavior_baseline_deviation",
+          "periodicity",
+          "network_confidence_score"
+        ],
+        "rows_trained": 3600,
+        "architectures": {
+          "anomaly_detector": "snn_lnn_isolation_forest",
+          "classifier": "hybrid_snn_lnn_xgboost_rf"
+        }
+      },
+      "artifacts": {
+        "classifier": "data/model_registry/versions/v20260418T044007Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260418T044007Z/anomaly.pkl"
+      }
+    },
+    {
+      "version": "v20260418T055524Z",
+      "trained_at": "2026-04-18T05:55:24.925220Z",
+      "source_mode": "real",
+      "dataset_name": "cicids2017_final",
+      "dataset_family": "CICIDS2017",
+      "metrics": {
+        "classifier": {
+          "accuracy": 0.7979,
+          "macro_f1": 0.4438,
+          "weighted_f1": 0.7082
+        },
+        "anomaly": {
+          "precision": 0.7979,
+          "recall": 1.0,
+          "f1": 0.8876,
+          "contamination": 0.2,
+          "threshold": 0.5
+        },
+        "feature_keys": [
+          "login_attempt_rate",
+          "failed_login_ratio",
+          "session_duration",
+          "bytes_transferred",
+          "unique_ips",
+          "endpoint_anomaly_score",
+          "behavior_baseline_deviation",
+          "periodicity",
+          "network_confidence_score"
+        ],
+        "rows_trained": 177027,
+        "label_distribution": {
+          "1": 141245,
+          "normal_traffic": 35782
+        },
+        "architectures": {
+          "anomaly_detector": "snn_lnn_isolation_forest",
+          "classifier": "hybrid_snn_lnn_xgboost_rf"
+        }
+      },
+      "artifacts": {
+        "classifier": "data/model_registry/versions/v20260418T055524Z/classifier.pkl",
+        "anomaly": "data/model_registry/versions/v20260418T055524Z/anomaly.pkl"
       }
     }
   ]
