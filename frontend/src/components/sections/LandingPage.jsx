@@ -4,7 +4,7 @@ import {
   SIGNAL_LAYERS,
   THREAT_CATEGORIES,
   LEGACY_SCENARIO_STEPS,
-} from "./utils/constants";
+} from "../../utils/constants";
 
 /* ══════════════════════════════════════════════════════════════════════════
    NetworkVisualization — Animated SVG network topology for the hero
