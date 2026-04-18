@@ -255,8 +255,18 @@ export function SecurityConsole(props) {
             <AttackGraph alerts={allAlerts} />
           </div>
 
-          <div className="panel">
+                    <div className="panel">
             <div className="panel-header">
+              <div className="panel-title">Operations Support</div>
+            </div>
+            <div className="soc-bot-container">
+              <img src="/images/soc-bot.png" alt="Sentinel 01" className="soc-bot-image" />
+              <div className="soc-bot-bubble">
+                <strong>Sentinel-01</strong>
+                <p>Monitoring your pipeline for anomalies. I'll flag any high-risk patterns immediately.</p>
+              </div>
+            </div>
+            <div className="panel-header" style={{marginTop: '8px'}}>
               <div className="panel-title">Recent alerts</div>
             </div>
             <AlertFeed
@@ -568,9 +578,17 @@ export function SecurityConsole(props) {
               {loading.assistant ? "Thinking..." : "Ask Assistant"}
             </button>
           </div>
+
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">Assistant output</div>
+            </div>
+            <div className="soc-bot-container">
+              <img src="/images/soc-bot.png" alt="Sentinel 01 Assistant" className="soc-bot-image" />
+              <div className="soc-bot-bubble">
+                <strong>AI Brain Active</strong>
+                <p>Analyzing context and historical telemetry. Providing multi-layer correlation advice.</p>
+              </div>
             </div>
             {assistantAnswer ? (
               <div className="assistant-answer">

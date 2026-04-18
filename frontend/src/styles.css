@@ -2164,3 +2164,46 @@ td {
 .app-container {
   padding-top: 32px !important;
 }
+
+/* =====================================================
+   SOC BOT (SENTINEL 01)
+   ===================================================== */
+.soc-bot-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 16px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.soc-bot-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--accent);
+}
+
+.soc-bot-bubble {
+  flex: 1;
+}
+
+.soc-bot-bubble strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.soc-bot-bubble p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
